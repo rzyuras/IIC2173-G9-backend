@@ -7,10 +7,11 @@ const moment = require('moment-timezone');
 const pg_dbname = process.env.DATABASE_NAME;
 const pg_user = process.env.DATABASE_USER;
 const pg_password = process.env.DATABASE_PASSWORD;
-const pg_host = 'db'; // O usa 'localhost' según tu configuración local
+const pg_host = 'localhost'; // O usa 'localhost' según tu configuración local
 
 // Crear instancia de Database
-const db = new Database(pg_dbname, pg_user, pg_password, pg_host);
+const db = new Database("arquibdd", "postgres", "postgres", "localhost");
+db.connect()
 
 // Crea una instancia de Express y la almacena en la variable app.
 const app = express();
@@ -39,10 +40,9 @@ app.get('/flights', async (req, res) => {
     try {
         const { page = 1, count = 25, departure, arrival, date } = req.query;
         const flights = await db.getAllFlights();
+        const actualDatetime = moment().utc();
         let flightsFiltered = flights;
-
-        const actualDatetimeUTC = moment().utc();
-
+    
         if (departure && !arrival && !date) {
             flightsFiltered = flights.filter(flight => flight.departure_airport_id === departure);
         } else if (arrival && !departure && !date) {
