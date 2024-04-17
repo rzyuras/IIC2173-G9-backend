@@ -13,9 +13,11 @@ const pgHost = 'db'; // O usa 'localhost' según tu configuración local
 const db = new Database(pgDbname, pgUser, pgPassword, pgHost);
 db.connect()
 
+
 // Crea una instancia de Express y la almacena en la variable app.
 const app = express();
 app.use(express.json()); // Middleware para parsear JSON
+
 
 class FlightData {
     constructor(data) {
