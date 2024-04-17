@@ -1,6 +1,7 @@
-FROM python:3.11.6-slim
+FROM node:18-slim
 WORKDIR /broker
 COPY . .
-
-RUN pip install --no-cache-dir -r requirements.txt
-CMD ["python", "broker.py"]
+RUN npm install
+EXPOSE 3000
+ENV NODE_ENV=production
+CMD ["node", "broker.js"]

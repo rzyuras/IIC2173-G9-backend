@@ -1,6 +1,7 @@
-FROM python:3.11.6-slim
+FROM node:18-slim
 WORKDIR /app
 COPY . .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN npm install
 EXPOSE 3000
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "3000"]
+ENV NODE_ENV=production
+CMD ["node", "main.js"]

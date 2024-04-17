@@ -4,13 +4,13 @@ require('dotenv').config();
 const moment = require('moment-timezone');
 
 // Datos de conexión PostgreSQL
-const pg_dbname = process.env.DATABASE_NAME;
-const pg_user = process.env.DATABASE_USER;
-const pg_password = process.env.DATABASE_PASSWORD;
-const pg_host = 'localhost'; // O usa 'localhost' según tu configuración local
+const pgDbname = process.env.DATABASE_NAME;
+const pgUser = process.env.DATABASE_USER;
+const pgPassword = process.env.DATABASE_PASSWORD;
+const pgHost = 'db'; // O usa 'localhost' según tu configuración local
 
 // Crear instancia de Database
-const db = new Database("arquibdd", "postgres", "postgres", "localhost");
+const db = new Database(pgDbname, pgUser, pgPassword, pgHost);
 db.connect()
 
 // Crea una instancia de Express y la almacena en la variable app.
