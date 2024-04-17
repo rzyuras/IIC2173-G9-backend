@@ -1,6 +1,7 @@
 const express = require('express');
 const Database = require('./db'); // Asume que tienes un archivo db.js que exporta la clase Database
 require('dotenv').config();
+const moment = require('moment-timezone');
 
 // Datos de conexión PostgreSQL
 const pg_dbname = process.env.DATABASE_NAME;
@@ -33,7 +34,6 @@ class FlightData {
         this.airline_logo = data.airline_logo;
     }
 }
-const moment = require('moment-timezone');
 
 app.get('/flights', async (req, res) => {
     try {
