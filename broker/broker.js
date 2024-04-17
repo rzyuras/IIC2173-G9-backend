@@ -50,4 +50,4 @@ const mqttPort = 9000;
 const mqttUser = 'students';
 const mqttPassword = 'iic2173-2024-1-students';
 
-const mqttClient = new MQTTClient(mqttBroker, mqttPort, mqttUser, mqttPassword);
+module.exports = MQTTClient;
