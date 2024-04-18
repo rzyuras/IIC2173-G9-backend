@@ -19,7 +19,24 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y docker-compose
+      
+    - name: Setup environment variables
+      run: |
+        echo "DATABASE_USER=${{ secrets.DATABASE_USER }}" >> $GITHUB_ENV
+        echo "DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}" >> $GITHUB_ENV
+        echo "DATABASE_NAME=${{ secrets.DATABASE_NAME }}" >> $GITHUB_ENV
 
     - name: Build and run Docker Compose services
       run: |
         docker-compose -f docker-compose.yml up --build --abort-on-container-exit
+
+    - name: Check logs
+      run: |
+        docker-compose logs
+        docker-compose logs | grep -q 'error' && exit 1 || echo "No critical errors found in logs."
+
+    - name: Cleanup
+      run: |
+        docker-compose down
+
+  
