@@ -22,12 +22,14 @@ services:
     networks:
       - app-network
     environment:
+      LOG_MIN_MESSAGES: DEBUG1 # Ajustar el nivel de logs
+      LOG_MIN_ERROR_STATEMENT: DEBUG1 # Ajustar el nivel de logs para errores
       POSTGRES_USER: ${DATABASE_USER}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       POSTGRES_DB: ${DATABASE_NAME}
     volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
       - postgres-data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
   broker:
     build:
