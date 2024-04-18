@@ -49,11 +49,11 @@ class MQTTClient {
     }
   }
 }
-
-const mqttBroker = "broker.iic2173.org";
-const mqttPort = 9000;
-const mqttUser = "students";
-const mqttPassword = "iic2173-2024-1-students";
+const pgDbname = process.env.DATABASE_NAME;
+const mqttBroker = process.env.MQTTT_BROKER;
+const mqttPort = process.env.MQTT_PORT;
+const mqttUser = process.env.MQTT_USER;
+const mqttPassword = process.env.MQTT_PASSWORD;
 
 const mqtt_client = new MQTTClient(
   mqttBroker,
