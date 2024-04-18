@@ -1,12 +1,12 @@
-const { Client } = require("pg");
+const { Client } = require('pg');
 
 class Database {
   constructor(dbname, user, password, host) {
     this.client = new Client({
-      user: user,
-      host: host,
+      user,
+      host,
       database: dbname,
-      password: password,
+      password,
     });
   }
 

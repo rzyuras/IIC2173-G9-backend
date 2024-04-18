@@ -6,5 +6,9 @@
     "moment-timezone": "^0.5.45",
     "mqtt": "^5.5.2",
     "pg": "^8.11.5"
-  }
+  },
+
+  "scripts": {
+    "lint": "eslint '**/*.{js,jsx,ts,tsx}'"
+  }  
 }
