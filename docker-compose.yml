@@ -1,0 +1,57 @@
+services:
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+    depends_on:
+      - db
+    environment:
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_NAME: ${DATABASE_NAME}
+    
+  db:
+    image: postgres:15
+    container_name: postgres
+    networks:
+      - app-network
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres-data:/var/lib/postgresql/data
+
+  broker:
+    build:
+      context: ./broker
+      dockerfile: Dockerfile  
+    container_name: broker
+    restart: unless-stopped
+    networks:
+      - app-network
+    depends_on:
+      - db
+    environment:
+      MQTT_BROKER: 'broker.iic2173.org'  
+      MQTT_PORT: 9000
+      MQTT_USER: 'students'
+      MQTT_PASSWORD: 'iic2173-2024-1-students'
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_NAME: ${DATABASE_NAME}
+
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
