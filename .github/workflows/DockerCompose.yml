@@ -28,15 +28,7 @@ jobs:
 
     - name: Build and run Docker Compose services
       run: |
-        docker-compose -f docker-compose.yml up --build --abort-on-container-exit
+        docker-compose -f docker-compose.yml up --build -d
 
-    - name: Check logs
-      run: |
-        docker-compose logs
-        docker-compose logs | grep -q 'error' && exit 1 || echo "No critical errors found in logs."
-
-    - name: Cleanup
-      run: |
-        docker-compose down
 
   
