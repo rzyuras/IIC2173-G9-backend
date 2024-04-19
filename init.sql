@@ -14,5 +14,5 @@ CREATE TABLE IF NOT EXISTS flights (
       price NUMERIC,
       currency CHAR(3),
       airline_logo_url VARCHAR(255),
-      flights_tickets INTEGER DEFAULT 0
+      flights_tickets INTEGER DEFAULT 90
     );
