@@ -59,6 +59,48 @@ class Database {
     await this.client.query(insertQuery, values);
   }
 
+  async insertUser(dataUser) {
+    const insertQuery = `
+            INSERT INTO users
+            (name, surname, email, username, password, country)
+            VALUES
+            ($1, $2, $3, $4, $5, $6)
+        `;
+    const values = [
+      dataUser.name,
+      dataUser.surname,
+      dataUser.email,
+      dataUser.username,
+      dataUser.password,
+      dataUser.country,
+    ];
+    await this.client.query(insertQuery, values);
+  }
+
+  async getUserByEmail(email) {
+    const query = `
+            SELECT * FROM users WHERE email = $1
+        `;
+    const result = await this.client.query(query, [email]);
+    return result.rows[0];
+  }
+
+  async getUserByUsername(username) {
+    const query = `
+            SELECT * FROM users WHERE username = $1
+        `;
+    const result = await this.client.query(query, [username]);
+    return result.rows[0];
+  }
+
+  async getUsers() {
+    const query = `
+            SELECT * FROM users
+        `;
+    const result = await this.client.query(query);
+    return result.rows;
+  }
+
   async close() {
     await this.client.end();
   }

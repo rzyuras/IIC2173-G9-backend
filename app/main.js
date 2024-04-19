@@ -2,8 +2,15 @@ const express = require("express");
 const mqtt = require("mqtt");
 const { v4: uuidv4 } = require("uuid");
 const moment = require("moment-timezone");
+const { auth } = require('express-oauth2-jwt-bearer');
 const Database = require("./db"); // Asume que tienes un archivo db.js que exporta la clase Database
 require("dotenv").config();
+
+const jwtCheck = auth({
+  audience: 'https://my-api-endpoint/',
+  issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
+  tokenSigningAlg: 'RS256',
+});
 
 // Datos de conexión PostgreSQL
 const pgDbname = process.env.DATABASE_NAME;
@@ -183,6 +190,7 @@ app.post("/flight/request-purchase", checkJwt, async (req, res) => {
     });
   }
 });
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT);
