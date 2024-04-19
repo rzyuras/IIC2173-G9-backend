@@ -2,6 +2,20 @@ const express = require('express');
 const moment = require('moment-timezone');
 const Database = require('./db'); // Asume que tienes un archivo db.js que exporta la clase Database
 require('dotenv').config();
+const bcrypt = require('bcrypt');
+const { auth } = require('express-oauth2-jwt-bearer');
+
+const port = process.env.PORT || 8080;
+
+const jwtCheck = auth({
+  audience: 'https://my-api-endpoint/',
+  issuerBaseURL: 'https://dev-1op7rfthd5gfwdq8.us.auth0.com/',
+  tokenSigningAlg: 'RS256'
+});
+
+// enforce on all endpoints
+app.use(jwtCheck);
+
 
 // Datos de conexión PostgreSQL
 const pgDbname = process.env.DATABASE_NAME;
@@ -16,6 +30,7 @@ db.connect();
 // Crea una instancia de Express y la almacena en la variable app.
 const app = express();
 app.use(express.json()); // Middleware para parsear JSON
+
 
 class FlightData {
   constructor(data) {
@@ -122,37 +137,6 @@ app.post('/flights', async (req, res) => {
   }
 });
 
-app.post('/register', async (req, res) => {
-  try {
-    await db.insertUser(req.body);
-    res.status(201).json({ message: 'User registered successfully' });
-  } catch (error) {
-    if (
-      error.message === 'Email already exists'
-      || error.message === 'Username already exists'
-    ) {
-      res.status(400).json({ message: error.message });
-    } else {
-      res
-        .status(500)
-        .json({
-          message: 'An error occurred registering the user',
-          error: error.message,
-        });
-    }
-  }
-});
-
-app.get('/users', async (req, res) => {
-  try {
-    const users = await db.getUsers();
-    res.json({ users });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: 'Error retrieving users', error: error.message });
-  }
-});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT);
