@@ -13,5 +13,6 @@ CREATE TABLE IF NOT EXISTS flights (
       carbon_emissions NUMERIC,
       price NUMERIC,
       currency CHAR(3),
-      airline_logo_url VARCHAR(255)
+      airline_logo_url VARCHAR(255),
+      flights_tickets INTEGER DEFAULT 0
     );
