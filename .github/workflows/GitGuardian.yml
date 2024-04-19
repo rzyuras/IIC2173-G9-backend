@@ -1,6 +1,6 @@
 name: Git Guardian Action
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   scanning:
