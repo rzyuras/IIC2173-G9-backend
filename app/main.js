@@ -1,7 +1,14 @@
 const express = require('express');
 const moment = require('moment-timezone');
+const { auth } = require('express-oauth2-jwt-bearer');
 const Database = require('./db'); // Asume que tienes un archivo db.js que exporta la clase Database
 require('dotenv').config();
+
+const jwtCheck = auth({
+  audience: 'https://my-api-endpoint/',
+  issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
+  tokenSigningAlg: 'RS256',
+});
 
 // Datos de conexión PostgreSQL
 const pgDbname = process.env.DATABASE_NAME;
@@ -36,7 +43,7 @@ class FlightData {
   }
 }
 
-app.get('/flights', async (req, res) => {
+app.get('/flights', jwtCheck, async (req, res) => {
   try {
     const {
       page = 1, count = 25, departure, arrival, date,
@@ -121,5 +128,6 @@ app.post('/flights', async (req, res) => {
     });
   }
 });
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT);
