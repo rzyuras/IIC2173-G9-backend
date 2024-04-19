@@ -1,4 +1,5 @@
 const { Client } = require('pg');
+const bcrypt = require('bcrypt');
 
 class Database {
   constructor(dbname, user, password, host) {
@@ -57,6 +58,54 @@ class Database {
       data.airline_logo_url,
     ];
     await this.client.query(insertQuery, values);
+  }
+
+  async insertUser(dataUser) {
+    const emailQuery = `
+            SELECT COUNT(*) FROM users WHERE email = $1
+        `;
+    const emailValues = await this.client.query(emailQuery, [dataUser.email]);
+    const emailCount = parseInt(emailValues.rows[0].count, 10);
+    if (emailCount > 0) {
+      throw new Error('Email already exists');
+    }
+
+    const usernameQuery = `
+            SELECT COUNT(*) FROM users WHERE username = $1
+        `;
+    const usernameValues = await this.client.query(usernameQuery, [
+      dataUser.username,
+    ]);
+    const usernameCount = parseInt(usernameValues.rows[0].count, 10);
+    if (usernameCount > 0) {
+      throw new Error('Username already exists');
+    }
+
+    const hashedPassword = await bcrypt.hash(dataUser.password, 10);
+
+    const insertQuery = `
+            INSERT INTO users
+            (name, surname, email, username, password, country)
+            VALUES
+            ($1, $2, $3, $4, $5, $6)
+        `;
+    const values = [
+      dataUser.name,
+      dataUser.surname,
+      dataUser.email,
+      dataUser.username,
+      hashedPassword,
+      dataUser.country,
+    ];
+    await this.client.query(insertQuery, values);
+  }
+
+  async getUsers() {
+    const query = `
+            SELECT * FROM users
+        `;
+    const result = await this.client.query(query);
+    return result.rows;
   }
 
   async close() {

@@ -121,5 +121,38 @@ app.post('/flights', async (req, res) => {
     });
   }
 });
+
+app.post('/register', async (req, res) => {
+  try {
+    await db.insertUser(req.body);
+    res.status(201).json({ message: 'User registered successfully' });
+  } catch (error) {
+    if (
+      error.message === 'Email already exists'
+      || error.message === 'Username already exists'
+    ) {
+      res.status(400).json({ message: error.message });
+    } else {
+      res
+        .status(500)
+        .json({
+          message: 'An error occurred registering the user',
+          error: error.message,
+        });
+    }
+  }
+});
+
+app.get('/users', async (req, res) => {
+  try {
+    const users = await db.getUsers();
+    res.json({ users });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: 'Error retrieving users', error: error.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT);
