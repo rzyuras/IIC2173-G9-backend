@@ -1,1 +1,7 @@
+# Environment variables
 .env
+
+# Other common directories to ignore
+node_modules/
+dist/
+build/
