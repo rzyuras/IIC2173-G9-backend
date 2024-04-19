@@ -14,4 +14,4 @@ CREATE TABLE IF NOT EXISTS flights (
       price NUMERIC,
       currency CHAR(3),
       airline_logo_url VARCHAR(255)
-    )
+    );
