@@ -9,12 +9,12 @@ const port = process.env.PORT || 8080;
 
 const jwtCheck = auth({
   audience: 'https://my-api-endpoint/',
-  issuerBaseURL: 'https://dev-1op7rfthd5gfwdq8.us.auth0.com/',
+  issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
   tokenSigningAlg: 'RS256'
 });
 
-// enforce on all endpoints
-app.use(jwtCheck);
+
+
 
 
 // Datos de conexión PostgreSQL
@@ -51,7 +51,7 @@ class FlightData {
   }
 }
 
-app.get('/flights', async (req, res) => {
+app.get('/flights', jwtCheck, async (req, res) => {
   try {
     const {
       page = 1, count = 25, departure, arrival, date,
