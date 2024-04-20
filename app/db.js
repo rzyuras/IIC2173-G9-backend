@@ -30,6 +30,22 @@ class Database {
     return result.rows[0];
   }
 
+  async getFlightBydata(departure, arrival, departure_time) {
+    const query = `
+            SELECT * FROM flights WHERE departure_airport_id = $1 AND arrival_airport_id = $2 AND departure_airport_time = $3
+        `;
+    const result = await this.client.query(query, [departure, arrival, departure_time]);
+    return result.rows[0];
+  }
+
+  async getAllPurchases() {
+    const query = `
+            SELECT * FROM purchases
+        `;
+    const result = await this.client.query(query);
+    return result.rows;
+  }
+
   async insertFlight(data) {
     const insertQuery = `
             INSERT INTO flights 
@@ -59,46 +75,20 @@ class Database {
     await this.client.query(insertQuery, values);
   }
 
-  async insertUser(dataUser) {
+  async insertPurchase(data) {
     const insertQuery = `
-            INSERT INTO users
-            (name, surname, email, username, password, country)
-            VALUES
-            ($1, $2, $3, $4, $5, $6)
+            INSERT INTO purchases 
+            (flight_id, user_id, status, cuantity) 
+            VALUES 
+            ($1, $2, $3, $4)
         `;
     const values = [
-      dataUser.name,
-      dataUser.surname,
-      dataUser.email,
-      dataUser.username,
-      dataUser.password,
-      dataUser.country,
+      data.flight_id,
+      data.user_id,
+      data.status,
+      data.cuantity,
     ];
     await this.client.query(insertQuery, values);
-  }
-
-  async getUserByEmail(email) {
-    const query = `
-            SELECT * FROM users WHERE email = $1
-        `;
-    const result = await this.client.query(query, [email]);
-    return result.rows[0];
-  }
-
-  async getUserByUsername(username) {
-    const query = `
-            SELECT * FROM users WHERE username = $1
-        `;
-    const result = await this.client.query(query, [username]);
-    return result.rows[0];
-  }
-
-  async getUsers() {
-    const query = `
-            SELECT * FROM users
-        `;
-    const result = await this.client.query(query);
-    return result.rows;
   }
 
   async close() {

@@ -16,12 +16,11 @@ CREATE TABLE IF NOT EXISTS flights (
       airline_logo_url VARCHAR(255)
     );
 
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE IF NOT EXISTS purchase (
       id SERIAL PRIMARY KEY,
-      name VARCHAR(255),
-      surname VARCHAR(255),
-      email VARCHAR(255),
-      username VARCHAR(255),
-      password VARCHAR(255),
-      country VARCHAR(255)
+      flights_id INT,
+      user_id VARCHAR(255),
+      status VARCHAR(10) CHECK (status IN ('pending', 'approved', 'rejected')),
+      cuantity INT,
+      FOREIGN KEY (flights_id) REFERENCES flights(id)
     );
