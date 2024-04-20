@@ -17,10 +17,10 @@ CREATE TABLE IF NOT EXISTS flights (
     );
 
 CREATE TABLE IF NOT EXISTS purchase (
+      id SERIAL PRIMARY KEY,
       flights_id INT,
       user_id VARCHAR(255),
       status VARCHAR(10) CHECK (status IN ('pending', 'approved', 'rejected')),
       cuantity INT,
-      PRIMARY KEY (flights_id, user_id),
       FOREIGN KEY (flights_id) REFERENCES flights(id)
     );
