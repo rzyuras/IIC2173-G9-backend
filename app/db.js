@@ -30,6 +30,22 @@ class Database {
     return result.rows[0];
   }
 
+  async getFlightBydata(departure, arrival, departure_time) {
+    const query = `
+            SELECT * FROM flights WHERE departure_airport_id = $1 AND arrival_airport_id = $2 AND departure_airport_time = $3
+        `;
+    const result = await this.client.query(query, [departure, arrival, departure_time]);
+    return result.rows[0];
+  }
+
+  async getAllPurchases() {
+    const query = `
+            SELECT * FROM purchases
+        `;
+    const result = await this.client.query(query);
+    return result.rows;
+  }
+
   async insertFlight(data) {
     const insertQuery = `
             INSERT INTO flights 
@@ -55,6 +71,22 @@ class Database {
       data.price,
       data.currency,
       data.airline_logo_url,
+    ];
+    await this.client.query(insertQuery, values);
+  }
+
+  async insertPurchase(data) {
+    const insertQuery = `
+            INSERT INTO purchases 
+            (flight_id, user_id, status, cuantity) 
+            VALUES 
+            ($1, $2, $3, $4)
+        `;
+    const values = [
+      data.flight_id,
+      data.user_id,
+      data.status,
+      data.cuantity,
     ];
     await this.client.query(insertQuery, values);
   }
