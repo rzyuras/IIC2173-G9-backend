@@ -2,7 +2,8 @@ const mqtt = require("mqtt");
 const axios = require("axios");
 
 const url_flights = "http://app:3000/flights";
-const url_request = "http://app:3000/flights/request-purchase";
+const url_request = "http://app:3000/flights/request";
+const url_validation = "http://app:3000/flights/validation";
 
 class MQTTClient {
   constructor(broker, port, user, password) {
@@ -72,12 +73,17 @@ class MQTTClient {
 
         console.log(payload);
 
-        await axios.post(url_request, payload,
-          {
-            headers: {
-              "Authorization": `Bearer ${process.env.AUTH_TOKEN}`,
-            },
-          })
+        axios.post(url_request, payload).catch(error => {
+          if (error.response) {
+            console.log("Detalles del error del servidor:", error.response.data);
+            console.log("Código de estado:", error.response.status);
+          } else if (error.request) {
+            console.log("La solicitud fue hecha pero no se recibió respuesta", error.request);
+          } else {
+            console.log("Error al hacer la solicitud:", error.message);
+          }
+        });
+        
       } catch (error) {
         console.error(
           `An error occurred while processing the messages: ${error}`

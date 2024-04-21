@@ -180,7 +180,7 @@ app.get("/purchase", async (req, res) => {
   }
 });
 
-app.post("/flights/request-purchase", jwtCheck, async (req, res) => {
+app.post("/flights/request", async (req, res) => {
   try {
     const body = req.body;
 
@@ -202,27 +202,35 @@ app.post("/flights/request-purchase", jwtCheck, async (req, res) => {
 
       await db.insertPurchase({
         flight_id: body.flight_id,
-        user_id: req.user.sub,
+        user_id: "req.user.sub",
         status: "pending",
+        uuid: message.request_id,
         quantity: body.quantity,
       });
 
       client.publish("flights/requests", JSON.stringify(message));
+
+      // Si no hay error en la petición, responde con un mensaje de éxito (true)
+      res.json({ success: true });
+
+      // Otro Grupo
     } else if ((body.type = "other_group_purchase")) {
+      console.log(body)
+      console.log(flight)
+
       const flight = db.getFlightBydata(
         body.departure_airport,
         body.arrival_airport,
         body.departure_time
       );
-
+    
       await db.insertPurchase({
         flight_id: flight.flight_id,
         user_id: "none",
         status: "pending",
+        uuid: body.uuid,
         quantity: body.quantity,
       });
-
-      client.publish("flights/requests", JSON.stringify(message));
     }
   } catch (error) {
     res.status(500).json({
@@ -231,6 +239,24 @@ app.post("/flights/request-purchase", jwtCheck, async (req, res) => {
     });
   }
 });
+
+app.post("/flights/validation", async (req, res) => {
+  try {
+    const body = req.body;
+    if (body.valid) {
+      await db.updatePurchase(body.uuid, "completed");
+    } else {
+      await db.updatePurchase(body.uuid, "rejected");
+    }
+  } catch (error) {
+    res.status(500).json({
+      message: "An error occurred sending the validation",
+      error: error.message,
+    });
+  }
+});
+
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT);
