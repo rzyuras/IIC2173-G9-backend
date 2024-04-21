@@ -184,7 +184,7 @@ app.post("/flights/request", async (req, res) => {
   try {
     const body = req.body;
 
-    if ((body.type.includes("our_group_purchase"))) {
+    if (body.type.includes("our_group_purchase")) {
       const flight = await db.getFlight(body.flight_id);
       const message = {
         request_id: uuidv4(),
@@ -203,7 +203,7 @@ app.post("/flights/request", async (req, res) => {
       await db.insertPurchase({
         flight_id: body.flight_id,
         user_id: "req.user.sub",
-        status: "pending",
+        purchase_status: "pending",
         uuid: message.request_id,
         quantity: body.quantity,
       });
@@ -214,16 +214,16 @@ app.post("/flights/request", async (req, res) => {
       res.json({ success: true });
 
       // Otro Grupo
-    } else if ((body.type.includes("other_group_purchase"))) {
-      console.log(body)
-      console.log(flight)
+    } else if (body.type.includes("other_group_purchase")) {
+      console.log(body);
+      console.log(flight);
 
       const flight = db.getFlightBydata(
         body.departure_airport,
         body.arrival_airport,
         body.departure_time
       );
-    
+
       await db.insertPurchase({
         flight_id: flight.flight_id,
         user_id: "none",
@@ -243,8 +243,12 @@ app.post("/flights/request", async (req, res) => {
 app.post("/flights/validation", async (req, res) => {
   try {
     const body = req.body;
-    if (body.valid) {
-      await db.updatePurchase(body.uuid, "completed");
+    console.log(body);
+    const validation = Boolean(body.valid);
+    console.log(validation)
+    if (validation) {
+      await db.updatePurchase(body.uuid, "approved");
+      console.log("VAlidando")
     } else {
       await db.updatePurchase(body.uuid, "rejected");
     }
@@ -255,13 +259,6 @@ app.post("/flights/validation", async (req, res) => {
     });
   }
 });
-
-app.get("/flights/request", async (req, res) => {
-  const myPurchase =  await db.getPurchases();
-  res.json({ myPurchase });
-});
-
-
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT);

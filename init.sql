@@ -21,8 +21,8 @@ CREATE TABLE IF NOT EXISTS purchases (
       id SERIAL PRIMARY KEY,
       flight_id INT,
       user_id VARCHAR(255),
-      status VARCHAR(10) CHECK (status IN ('pending', 'approved', 'rejected')),
-      cuantity INT,
+      purchase_status VARCHAR(255) CHECK (purchase_status IN ('pending', 'approved', 'rejected')),
+      quantity INT,
       uuid VARCHAR(255),
       FOREIGN KEY (flight_id) REFERENCES flights(id)
     );

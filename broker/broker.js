@@ -12,7 +12,11 @@ class MQTTClient {
       password,
     });
     this.client.on("connect", () => {
-      this.client.subscribe(["flights/info", "flights/requests", "flights/validation"]);
+      this.client.subscribe([
+        "flights/info",
+        "flights/requests",
+        "flights/validation",
+      ]);
     });
     this.client.on("message", (topic, message) =>
       this.onMessage(topic, message)
@@ -73,23 +77,28 @@ class MQTTClient {
 
         console.log(payload);
 
-        axios.post(url_request, payload).catch(error => {
+        axios.post(url_request, payload).catch((error) => {
           if (error.response) {
-            console.log("Detalles del error del servidor:", error.response.data);
+            console.log(
+              "Detalles del error del servidor:",
+              error.response.data
+            );
             console.log("Código de estado:", error.response.status);
           } else if (error.request) {
-            console.log("La solicitud fue hecha pero no se recibió respuesta", error.request);
+            console.log(
+              "La solicitud fue hecha pero no se recibió respuesta",
+              error.request
+            );
           } else {
             console.log("Error al hacer la solicitud:", error.message);
           }
         });
-        
       } catch (error) {
         console.error(
           `An error occurred while processing the messages: ${error}`
         );
       }
-    } else if (topic == "flights/validation"){
+    } else if (topic == "flights/validation") {
       try {
         const data = JSON.parse(message);
         const payload = {
@@ -100,22 +109,27 @@ class MQTTClient {
         };
         console.log(payload);
 
-        await axios.post(url_validation, payload).catch(error => {
+        await axios.post(url_validation, payload).catch((error) => {
           if (error.response) {
-            console.log("Detalles del error del servidor:", error.response.data);
+            console.log(
+              "Detalles del error del servidor:",
+              error.response.data
+            );
             console.log("Código de estado:", error.response.status);
           } else if (error.request) {
-            console.log("La solicitud fue hecha pero no se recibió respuesta", error.request);
+            console.log(
+              "La solicitud fue hecha pero no se recibió respuesta",
+              error.request
+            );
           } else {
             console.log("Error al hacer la solicitud:", error.message);
           }
         });
-
       } catch (error) {
         console.error(
           `An error occurred while processing the message: ${error}`
         );
-    }
+      }
     }
   }
 }

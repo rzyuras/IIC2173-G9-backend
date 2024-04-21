@@ -1,4 +1,4 @@
-const { Client } = require('pg');
+const { Client } = require("pg");
 
 class Database {
   constructor(dbname, user, password, host) {
@@ -34,7 +34,11 @@ class Database {
     const query = `
             SELECT * FROM flights WHERE departure_airport_id = $1 AND arrival_airport_id = $2 AND departure_airport_time = $3
         `;
-    const result = await this.client.query(query, [departure, arrival, departure_time]);
+    const result = await this.client.query(query, [
+      departure,
+      arrival,
+      departure_time,
+    ]);
     return result.rows[0];
   }
 
@@ -78,7 +82,7 @@ class Database {
   async insertPurchase(data) {
     const insertQuery = `
             INSERT INTO purchases 
-            (flight_id, user_id, status, cuantity, uuid) 
+            (flight_id, user_id, status, quantity, uuid) 
             VALUES 
             ($1, $2, $3, $4, $5)
         `;
@@ -86,27 +90,27 @@ class Database {
       data.flight_id,
       data.user_id,
       data.status,
-      data.cuantity,
+      data.quantity,
       data.uuid,
     ];
     await this.client.query(insertQuery, values);
   }
 
-  async getPurchases(user_id) {
+  async getPurchases() {
     const query = `
             SELECT * FROM purchases
         `;
     const result = await this.client.query(query);
     return result.rows;
   }
-  
-  async updatePurchase(uuid, status) {
+
+  async updatePurchase(uuid, purchase_status) {
     const updateQuery = `
             UPDATE purchases
-            SET status = $1
+            SET purchase_status = $1
             WHERE uuid = $2
         `;
-    await this.client.query(updateQuery, [status, uuid]);
+    await this.client.query(updateQuery, [purchase_status, uuid]);
   }
 
   async close() {
