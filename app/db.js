@@ -32,7 +32,7 @@ class Database {
 
   async getFlightBydata(departure, arrival, departure_time) {
     const query = `
-            SELECT * FROM flights WHERE departure_airport_name = $1 AND arrival_airport_name = $2 AND departure_airport_time = $3
+            SELECT * FROM flights WHERE departure_airport_id = $1 AND arrival_airport_id = $2 AND departure_airport_time = $3
         `;
     const result = await this.client.query(query, [departure, arrival, departure_time]);
     return result.rows[0];
@@ -92,6 +92,14 @@ class Database {
     await this.client.query(insertQuery, values);
   }
 
+  async getPurchases(user_id) {
+    const query = `
+            SELECT * FROM purchases
+        `;
+    const result = await this.client.query(query);
+    return result.rows;
+  }
+  
   async updatePurchase(uuid, status) {
     const updateQuery = `
             UPDATE purchases

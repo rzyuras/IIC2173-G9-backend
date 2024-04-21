@@ -99,6 +99,18 @@ class MQTTClient {
           valid: data.valid,
         };
         console.log(payload);
+
+        await axios.post(url_validation, payload).catch(error => {
+          if (error.response) {
+            console.log("Detalles del error del servidor:", error.response.data);
+            console.log("Código de estado:", error.response.status);
+          } else if (error.request) {
+            console.log("La solicitud fue hecha pero no se recibió respuesta", error.request);
+          } else {
+            console.log("Error al hacer la solicitud:", error.message);
+          }
+        });
+
       } catch (error) {
         console.error(
           `An error occurred while processing the message: ${error}`

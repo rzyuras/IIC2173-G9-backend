@@ -184,7 +184,7 @@ app.post("/flights/request", async (req, res) => {
   try {
     const body = req.body;
 
-    if ((body.type = "our_group_purchase")) {
+    if ((body.type.includes("our_group_purchase"))) {
       const flight = await db.getFlight(body.flight_id);
       const message = {
         request_id: uuidv4(),
@@ -214,7 +214,7 @@ app.post("/flights/request", async (req, res) => {
       res.json({ success: true });
 
       // Otro Grupo
-    } else if ((body.type = "other_group_purchase")) {
+    } else if ((body.type.includes("other_group_purchase"))) {
       console.log(body)
       console.log(flight)
 
@@ -234,7 +234,7 @@ app.post("/flights/request", async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({
-      message: "An error occurred sending the request",
+      message: "An error occurred sending the request(API)",
       error: error.message,
     });
   }
@@ -254,6 +254,11 @@ app.post("/flights/validation", async (req, res) => {
       error: error.message,
     });
   }
+});
+
+app.get("/flights/request", async (req, res) => {
+  const myPurchase =  await db.getPurchases();
+  res.json({ myPurchase });
 });
 
 
