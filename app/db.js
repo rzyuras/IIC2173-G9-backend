@@ -82,14 +82,14 @@ class Database {
   async insertPurchase(data) {
     const insertQuery = `
             INSERT INTO purchases 
-            (flight_id, user_id, status, quantity, uuid) 
+            (flight_id, user_id, purchase_status, quantity, uuid) 
             VALUES 
             ($1, $2, $3, $4, $5)
         `;
     const values = [
       data.flight_id,
       data.user_id,
-      data.status,
+      data.purchase_status,
       data.quantity,
       data.uuid,
     ];
@@ -104,13 +104,13 @@ class Database {
     return result.rows;
   }
 
-  async updatePurchase(uuid, purchase_status) {
+  async updatePurchase(request_id, purchase_status) {
     const updateQuery = `
             UPDATE purchases
             SET purchase_status = $1
             WHERE uuid = $2
         `;
-    await this.client.query(updateQuery, [purchase_status, uuid]);
+    await this.client.query(updateQuery, [purchase_status, request_id]);
   }
 
   async close() {

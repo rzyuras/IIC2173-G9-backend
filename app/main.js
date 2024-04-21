@@ -169,7 +169,7 @@ app.post("/flights", async (req, res) => {
   }
 });
 
-app.get("/purchase", async (req, res) => {
+app.get("/flights/purchase", async (req, res) => {
   try {
     const purchases = await db.getAllPurchases();
     res.json({ purchases });
@@ -201,8 +201,8 @@ app.post("/flights/request", async (req, res) => {
       };
 
       await db.insertPurchase({
-        flight_id: body.flight_id,
-        user_id: "req.user.sub",
+        flight_id: bo"req.user.sub"dy.flight_id,
+        user_id: ,
         purchase_status: "pending",
         uuid: message.request_id,
         quantity: body.quantity,
@@ -227,7 +227,7 @@ app.post("/flights/request", async (req, res) => {
       await db.insertPurchase({
         flight_id: flight.flight_id,
         user_id: "none",
-        status: "pending",
+        purchase_status: "pending",
         uuid: body.uuid,
         quantity: body.quantity,
       });
@@ -247,10 +247,10 @@ app.post("/flights/validation", async (req, res) => {
     const validation = Boolean(body.valid);
     console.log(validation)
     if (validation) {
-      await db.updatePurchase(body.uuid, "approved");
+      await db.updatePurchase(body.request_id, "approved");
       console.log("VAlidando")
     } else {
-      await db.updatePurchase(body.uuid, "rejected");
+      await db.updatePurchase(body.request_id, "rejected");
     }
   } catch (error) {
     res.status(500).json({
