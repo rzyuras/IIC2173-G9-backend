@@ -1,4 +1,4 @@
-const { Client } = require("pg");
+const { Client } = require('pg');
 
 class Database {
   constructor(dbname, user, password, host) {
@@ -81,6 +81,14 @@ class Database {
     await this.client.query(updateQuery, values);
   }
 
+  async getPurchase(request_id) {
+    const query = `
+            SELECT quantity FROM purchases WHERE uuid = $1
+        `;
+    const result = await this.client.query(query, [request_id]);
+    return result.rows[0];
+  }
+
   async getMyPurchases(user_id) {
     const query = `
             SELECT * FROM purchases WHERE user_id = $1
@@ -119,9 +127,8 @@ class Database {
     ]);
     if (result.rows.length > 0) {
       return result.rows[0]; // Devuelve la fila actualizada
-    } else {
-      return null; // O manejar según corresponda cuando no hay filas actualizadas
     }
+    return null; // O manejar según corresponda cuando no hay filas actualizadas
   }
 
   async close() {

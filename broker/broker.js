@@ -1,10 +1,10 @@
-const mqtt = require("mqtt");
-const axios = require("axios");
-const getToken = require("./jwttoken");
+const mqtt = require('mqtt');
+const axios = require('axios');
+const getToken = require('./jwttoken');
 
-const url_flights = "http://app:3000/flights";
-const url_request = "http://app:3000/flights/request";
-const url_validation = "http://app:3000/flights/validation";
+const url_flights = 'http://app:3000/flights';
+const url_request = 'http://app:3000/flights/request';
+const url_validation = 'http://app:3000/flights/validation';
 
 class MQTTClient {
   constructor(broker, port, user, password) {
@@ -12,21 +12,19 @@ class MQTTClient {
       username: user,
       password,
     });
-    this.client.on("connect", () => {
+    this.client.on('connect', () => {
       this.client.subscribe([
-        "flights/info",
-        "flights/requests",
-        "flights/validation",
+        'flights/info',
+        'flights/requests',
+        'flights/validation',
       ]);
     });
-    this.client.on("message", (topic, message) =>
-      this.onMessage(topic, message)
-    );
+    this.client.on('message', (topic, message) => this.onMessage(topic, message));
   }
 
   // eslint-disable-next-line class-methods-use-this
   async onMessage(topic, message) {
-    if (topic == "flights/info") {
+    if (topic == 'flights/info') {
       try {
         const data = JSON.parse(message)[0];
         const flights = JSON.parse(data.flights);
@@ -56,14 +54,14 @@ class MQTTClient {
         // Es aceptable dejar el console.error aquí para el registro de errores
         // eslint-disable-next-line no-console
         console.error(
-          `An error occurred while processing the message: ${error}`
+          `An error occurred while processing the message: ${error}`,
         );
       }
-    } else if (topic == "flights/requests") {
+    } else if (topic == 'flights/requests') {
       try {
         const data = JSON.parse(message);
         const payload = {
-          type: "other_group_purchase",
+          type: 'other_group_purchase',
           request_id: data.request_id,
           group_id: data.group_id,
           user_id: data.user_id,
@@ -77,20 +75,20 @@ class MQTTClient {
         };
 
         console.log(payload);
-        
+
         const token = await getToken();
         console.log(token);
         const response = await axios.post(url_request, payload, {
           headers: {
-              'Authorization': `Bearer ${token}`
-          }
-      });
+            Authorization: `Bearer ${token}`,
+          },
+        });
       } catch (error) {
         console.error(
-          `An error occurred while processing the messages: ${error}`
+          `An error occurred while processing the messages: ${error}`,
         );
       }
-    } else if (topic == "flights/validation") {
+    } else if (topic == 'flights/validation') {
       try {
         const data = JSON.parse(message);
         const payload = {
@@ -104,22 +102,22 @@ class MQTTClient {
         await axios.post(url_validation, payload).catch((error) => {
           if (error.response) {
             console.log(
-              "Detalles del error del servidor:",
-              error.response.data
+              'Detalles del error del servidor:',
+              error.response.data,
             );
-            console.log("Código de estado:", error.response.status);
+            console.log('Código de estado:', error.response.status);
           } else if (error.request) {
             console.log(
-              "La solicitud fue hecha pero no se recibió respuesta",
-              error.request
+              'La solicitud fue hecha pero no se recibió respuesta',
+              error.request,
             );
           } else {
-            console.log("Error al hacer la solicitud:", error.message);
+            console.log('Error al hacer la solicitud:', error.message);
           }
         });
       } catch (error) {
         console.error(
-          `An error occurred while processing the message: ${error}`
+          `An error occurred while processing the message: ${error}`,
         );
       }
     }
