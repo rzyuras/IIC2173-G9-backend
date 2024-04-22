@@ -161,7 +161,20 @@ app.get("/flights/:identifier", async (req, res) => {
 
 app.post("/flights", async (req, res) => {
   try {
-    const flightData = new FlightData(req.body);
+    let body = req.body;
+
+    console.log("GUardando vuelo: departure y arrival", body.departure_airport_time, body.arrival_airport_time)
+    body.departure_airport_time = moment.tz(body.departure_airport_time, "YYYY-MM-DD HH:mm", "America/Santiago");
+    body.departure_airport_time = body.departure_airport_time.utc().format();
+
+    body.arrival_airport_time = moment.tz(body.arrival_airport_time, "YYYY-MM-DD HH:mm", "America/Santiago");
+    body.arrival_airport_time = body.arrival_airport_time.utc().format();
+
+    console.log("GUardando vuelo mod: departure y arrival", body.departure_airport_time, body.arrival_airport_time)
+
+
+    
+    const flightData = new FlightData(body);
     await db.insertFlight(flightData);
     res.status(201).json({ message: "Flight inserted successfully" });
   } catch (error) {
@@ -187,7 +200,9 @@ app.get("/purchase", jwtCheck, async (req, res) => {
 
 app.post("/flights/request", jwtCheck, async (req, res) => {
   try {
-    const body = req.body;
+    
+    const { body } = req;
+
 
     if (body.type.includes("our_group_purchase")) {
       const flight = await db.getFlight(body.flight_id);
@@ -221,22 +236,34 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
 
       // Otro Grupo
     } else if (body.type.includes("other_group_purchase")) {
-      console.log(body);
-      console.log(flight);
 
-      const flight = db.getFlightBydata(
+
+      let horaChile = moment.tz(body.departure_time, "YYYY-MM-DD HH:mm", "America/Santiago");
+      horaChile = horaChile.utc().format(); 
+
+
+
+
+      console.log("Datos", body.departure_airport, body.arrival_airport, horaChile)
+      const flight = await db.getFlightBydata(
         body.departure_airport,
         body.arrival_airport,
-        body.departure_time
+        horaChile
       );
 
-      await db.insertPurchase({
-        flight_id: flight.flight_id,
-        user_id: "none",
-        purchase_status: "pending",
-        uuid: body.uuid,
-        quantity: body.quantity,
-      });
+      console.log("Vuelo", flight)
+
+      if (flight) {
+        await db.insertPurchase({
+          flight_id: flight.id,
+          user_id: "null",
+          purchase_status: "pending",
+          uuid: body.request_id,
+          quantity: body.quantity,
+        });
+      }
+      
+
     }
   } catch (error) {
     res.status(500).json({
@@ -248,17 +275,37 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
 
 app.post("/flights/validation", async (req, res) => {
   try {
-    const body = req.body;
-    console.log(body);
-    const validation = Boolean(body.valid);
-    console.log(validation);
-    if (validation) {
-      const purchaseData = await db.updatePurchase(body.request_id, "approved");
-      await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
-    } else {
-      await db.updatePurchase(body.request_id, "rejected");
-    }
+    const { body } = req;
+
+    console.log("BODY", body);
+    const request_id = body.request_id;
+
+    // Delay de 10 segundos
+    setTimeout(async () => {
+      let validation = Boolean(body.valid);
+
+      const purchase = await db.getPurchase(request_id);
+      console.log("PURCHASE", purchase);
+      const flight = await db.getFlight(purchase.flight_id);
+      const flight_tickets = parseInt(flight.flight_tickets);
+
+      if (parseInt(purchase.quantity) > flight_tickets) {
+        validation = false;
+      }
+
+      if (validation) {
+        const purchaseData = await db.updatePurchase(request_id, "approved");
+        await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
+        res.status(200).json({ message: "Purchase validated and flight updated" });
+      } else {
+        await db.updatePurchase(request_id, "rejected");
+        res.status(200).json({ message: "Purchase rejected due to insufficient tickets" });
+      }
+    }, 10000); // 10000 milisegundos = 10 segundos
+
+
   } catch (error) {
+    console.log("Error during validation: ", error);
     res.status(500).json({
       message: "An error occurred sending the validation",
       error: error.message,

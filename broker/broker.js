@@ -1,6 +1,8 @@
 const mqtt = require("mqtt");
 const axios = require("axios");
 const getToken = require("./jwttoken");
+const moment = require("moment-timezone");
+
 
 const url_flights = "http://app:3000/flights";
 const url_request = "http://app:3000/flights/request";
@@ -79,7 +81,6 @@ class MQTTClient {
         console.log(payload);
         
         const token = await getToken();
-        console.log(token);
         const response = await axios.post(url_request, payload, {
           headers: {
               'Authorization': `Bearer ${token}`
