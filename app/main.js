@@ -8,7 +8,7 @@ const Database = require("./db");
 require("dotenv").config();
 
 const jwtCheck = auth({
-  audience: "https://my-api-endpoint/",
+  audience: "https://dev-1op7rfthd5gfwdq8.us.auth0.com/api/v2/",
   issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
   tokenSigningAlg: "RS256",
 });
@@ -169,7 +169,7 @@ app.post("/flights", async (req, res) => {
   }
 });
 
-app.get("/purchase", async (req, res) => {
+app.get("/purchase", jwtCheck, async (req, res) => {
   try {
     const user_id = "req.user.sub";
     const purchases = await db.getMyPurchases(user_id);
@@ -181,7 +181,7 @@ app.get("/purchase", async (req, res) => {
   }
 });
 
-app.post("/flights/request", async (req, res) => {
+app.post("/flights/request", jwtCheck, async (req, res) => {
   try {
     const body = req.body;
 
