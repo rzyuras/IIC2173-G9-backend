@@ -201,8 +201,7 @@ app.post('/flights/request', jwtCheck, async (req, res) => {
         quantity: body.quantity,
         seller: 0,
       };
-      console.log(req);
-      console.log(req.user);
+
       await db.insertPurchase({
         flight_id: body.flight_id,
         user_id: req.auth.payload.sub,
@@ -219,7 +218,6 @@ app.post('/flights/request', jwtCheck, async (req, res) => {
       // Otro Grupo
     } else if (body.type.includes('other_group_purchase')) {
       console.log(body);
-      console.log(flight);
 
       const flight = db.getFlightBydata(
         body.departure_airport,
@@ -246,10 +244,18 @@ app.post('/flights/request', jwtCheck, async (req, res) => {
 app.post('/flights/validation', async (req, res) => {
   try {
     const { body } = req;
-    console.log(body);
+    const request_id = body.request_id;
     const validation = Boolean(body.valid);
-    console.log(validation);
-    if (validation) {
+    
+    const countPurchase = await db.getPurchase(request_id);
+    const flight = await db.getFlight(purchase.flight_id);
+    const flight_tickets = flight.flight_tickets;
+    if (countPurchase.quantity > flight_tickets) {
+      validation = false;
+    }
+
+
+    if (validation ) {
       const purchaseData = await db.updatePurchase(body.request_id, 'approved');
       await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
     } else {
