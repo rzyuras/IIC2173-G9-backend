@@ -11,6 +11,9 @@ const jwtCheck = auth({
   audience: "https://dev-1op7rfthd5gfwdq8.us.auth0.com/api/v2/",
   issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
   tokenSigningAlg: "RS256",
+  secret: process.env.AUTH0_SECRET,
+  algorithms: ["RS256"],
+  issuer: process.env.AUTH0_ISSUER_BASE_URL,
 });
 
 const corsOptions = {
@@ -171,7 +174,8 @@ app.post("/flights", async (req, res) => {
 
 app.get("/purchase", jwtCheck, async (req, res) => {
   try {
-    const user_id = "req.user.sub";
+    console.log(req)
+    const user_id = req.auth.payload.sub;;
     const purchases = await db.getMyPurchases(user_id);
     res.json({ purchases });
   } catch (error) {
@@ -200,10 +204,11 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
         quantity: body.quantity,
         seller: 0,
       };
-
+      console.log(req);
+      console.log(req.user);
       await db.insertPurchase({
         flight_id: body.flight_id,
-        user_id: "req.user.sub",
+        user_id: req.auth.payload.sub,
         purchase_status: "pending",
         uuid: message.request_id,
         quantity: body.quantity,
