@@ -187,8 +187,8 @@ app.post("/flights", async (req, res) => {
 
 app.get("/purchase", jwtCheck, async (req, res) => {
   try {
-    console.log(req);
-    const user_id = req.auth.payload.sub;
+    console.log(req)
+    const user_id = req.auth.payload.sub;;
     const purchases = await db.getMyPurchases(user_id);
     res.json({ purchases });
   } catch (error) {
@@ -200,8 +200,9 @@ app.get("/purchase", jwtCheck, async (req, res) => {
 
 app.post("/flights/request", jwtCheck, async (req, res) => {
   try {
+    
     const { body } = req;
-    console.log("BODY", body)
+
 
     if (body.type.includes("our_group_purchase")) {
       const flight = await db.getFlight(body.flight_id);
@@ -218,7 +219,8 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
         quantity: body.quantity,
         seller: 0,
       };
-
+      console.log(req);
+      console.log(req.user);
       await db.insertPurchase({
         flight_id: body.flight_id,
         user_id: req.auth.payload.sub,
@@ -235,8 +237,11 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
       // Otro Grupo
     } else if (body.type.includes("other_group_purchase")) {
 
+
       let horaChile = moment.tz(body.departure_time, "YYYY-MM-DD HH:mm", "America/Santiago");
       horaChile = horaChile.utc().format(); 
+
+
 
 
       console.log("Datos", body.departure_airport, body.arrival_airport, horaChile)
@@ -258,6 +263,7 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
         });
       }
       
+
     }
   } catch (error) {
     res.status(500).json({
@@ -296,6 +302,7 @@ app.post("/flights/validation", async (req, res) => {
         res.status(200).json({ message: "Purchase rejected due to insufficient tickets" });
       }
     }, 10000); // 10000 milisegundos = 10 segundos
+
 
   } catch (error) {
     console.log("Error during validation: ", error);

@@ -3,6 +3,7 @@ const axios = require("axios");
 const getToken = require("./jwttoken");
 const moment = require("moment-timezone");
 
+
 const url_flights = "http://app:3000/flights";
 const url_request = "http://app:3000/flights/request";
 const url_validation = "http://app:3000/flights/validation";
@@ -78,13 +79,13 @@ class MQTTClient {
         };
 
         console.log(payload);
-
+        
         const token = await getToken();
         const response = await axios.post(url_request, payload, {
           headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+              'Authorization': `Bearer ${token}`
+          }
+      });
       } catch (error) {
         console.error(
           `An error occurred while processing the messages: ${error}`
