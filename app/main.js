@@ -8,7 +8,7 @@ const Database = require("./db");
 require("dotenv").config();
 
 const jwtCheck = auth({
-  audience: "https://my-api-endpoint/",
+  audience: "https://dev-1op7rfthd5gfwdq8.us.auth0.com/api/v2/",
   issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
   tokenSigningAlg: "RS256",
 });
@@ -169,9 +169,10 @@ app.post("/flights", async (req, res) => {
   }
 });
 
-app.get("/purchase", async (req, res) => {
+app.get("/purchase", jwtCheck, async (req, res) => {
   try {
-    const purchases = await db.getAllPurchases();
+    const user_id = "req.user.sub";
+    const purchases = await db.getMyPurchases(user_id);
     res.json({ purchases });
   } catch (error) {
     res
@@ -180,11 +181,11 @@ app.get("/purchase", async (req, res) => {
   }
 });
 
-app.post("/flights/request-purchase", jwtCheck, async (req, res) => {
+app.post("/flights/request", jwtCheck, async (req, res) => {
   try {
     const body = req.body;
 
-    if ((body.type = "our_group_purchase")) {
+    if (body.type.includes("our_group_purchase")) {
       const flight = await db.getFlight(body.flight_id);
       const message = {
         request_id: uuidv4(),
@@ -202,13 +203,22 @@ app.post("/flights/request-purchase", jwtCheck, async (req, res) => {
 
       await db.insertPurchase({
         flight_id: body.flight_id,
-        user_id: req.user.sub,
-        status: "pending",
+        user_id: "req.user.sub",
+        purchase_status: "pending",
+        uuid: message.request_id,
         quantity: body.quantity,
       });
 
       client.publish("flights/requests", JSON.stringify(message));
-    } else if ((body.type = "other_group_purchase")) {
+
+      // Si no hay error en la petición, responde con un mensaje de éxito (true)
+      res.json({ success: true });
+
+      // Otro Grupo
+    } else if (body.type.includes("other_group_purchase")) {
+      console.log(body);
+      console.log(flight);
+
       const flight = db.getFlightBydata(
         body.departure_airport,
         body.arrival_airport,
@@ -218,15 +228,34 @@ app.post("/flights/request-purchase", jwtCheck, async (req, res) => {
       await db.insertPurchase({
         flight_id: flight.flight_id,
         user_id: "none",
-        status: "pending",
+        purchase_status: "pending",
+        uuid: body.uuid,
         quantity: body.quantity,
       });
-
-      client.publish("flights/requests", JSON.stringify(message));
     }
   } catch (error) {
     res.status(500).json({
-      message: "An error occurred sending the request",
+      message: "An error occurred sending the request(API)",
+      error: error.message,
+    });
+  }
+});
+
+app.post("/flights/validation", async (req, res) => {
+  try {
+    const body = req.body;
+    console.log(body);
+    const validation = Boolean(body.valid);
+    console.log(validation);
+    if (validation) {
+      const purchaseData = await db.updatePurchase(body.request_id, "approved");
+      await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
+    } else {
+      await db.updatePurchase(body.request_id, "rejected");
+    }
+  } catch (error) {
+    res.status(500).json({
+      message: "An error occurred sending the validation",
       error: error.message,
     });
   }
