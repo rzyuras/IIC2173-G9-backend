@@ -1,4 +1,4 @@
-const { Client } = require("pg");
+const { Client } = require('pg');
 
 class Database {
   constructor(dbname, user, password, host) {
@@ -119,9 +119,8 @@ class Database {
     ]);
     if (result.rows.length > 0) {
       return result.rows[0]; // Devuelve la fila actualizada
-    } else {
-      return null; // O manejar según corresponda cuando no hay filas actualizadas
     }
+    return null; // O manejar según corresponda cuando no hay filas actualizadas
   }
 
   async close() {
