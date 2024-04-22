@@ -171,7 +171,8 @@ app.post("/flights", async (req, res) => {
 
 app.get("/purchase", async (req, res) => {
   try {
-    const purchases = await db.getAllPurchases();
+    const user_id = "req.user.sub";
+    const purchases = await db.getMyPurchases(user_id);
     res.json({ purchases });
   } catch (error) {
     res
@@ -245,10 +246,10 @@ app.post("/flights/validation", async (req, res) => {
     const body = req.body;
     console.log(body);
     const validation = Boolean(body.valid);
-    console.log(validation)
+    console.log(validation);
     if (validation) {
-      await db.updatePurchase(body.request_id, "approved");
-      console.log("VAlidando")
+      const purchaseData = await db.updatePurchase(body.request_id, "approved");
+      await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
     } else {
       await db.updatePurchase(body.request_id, "rejected");
     }

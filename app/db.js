@@ -42,14 +42,6 @@ class Database {
     return result.rows[0];
   }
 
-  async getAllPurchases() {
-    const query = `
-            SELECT * FROM purchases
-        `;
-    const result = await this.client.query(query);
-    return result.rows;
-  }
-
   async insertFlight(data) {
     const insertQuery = `
             INSERT INTO flights 
@@ -79,6 +71,24 @@ class Database {
     await this.client.query(insertQuery, values);
   }
 
+  async updateFlight(quantity, flight_id) {
+    const updateQuery = `
+            UPDATE flights
+            SET flight_tickets = flight_tickets - $1
+            WHERE id = $2
+        `;
+    const values = [quantity, flight_id];
+    await this.client.query(updateQuery, values);
+  }
+
+  async getMyPurchases(user_id) {
+    const query = `
+            SELECT * FROM purchases WHERE user_id = $1
+        `;
+    const result = await this.client.query(query, [user_id]);
+    return result.rows;
+  }
+
   async insertPurchase(data) {
     const insertQuery = `
             INSERT INTO purchases 
@@ -96,21 +106,22 @@ class Database {
     await this.client.query(insertQuery, values);
   }
 
-  async getPurchases() {
-    const query = `
-            SELECT * FROM purchases
-        `;
-    const result = await this.client.query(query);
-    return result.rows;
-  }
-
   async updatePurchase(request_id, purchase_status) {
     const updateQuery = `
-            UPDATE purchases
-            SET purchase_status = $1
-            WHERE uuid = $2
-        `;
-    await this.client.query(updateQuery, [purchase_status, request_id]);
+        UPDATE purchases
+        SET purchase_status = $1  
+        WHERE uuid = $2
+        RETURNING quantity, flight_id;
+    `;
+    const result = await this.client.query(updateQuery, [
+      purchase_status,
+      request_id,
+    ]);
+    if (result.rows.length > 0) {
+      return result.rows[0]; // Devuelve la fila actualizada
+    } else {
+      return null; // O manejar según corresponda cuando no hay filas actualizadas
+    }
   }
 
   async close() {
