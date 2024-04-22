@@ -169,7 +169,7 @@ app.post("/flights", async (req, res) => {
   }
 });
 
-app.get("/flights/purchase", async (req, res) => {
+app.get("/purchase", async (req, res) => {
   try {
     const purchases = await db.getAllPurchases();
     res.json({ purchases });
@@ -201,8 +201,8 @@ app.post("/flights/request", async (req, res) => {
       };
 
       await db.insertPurchase({
-        flight_id: bo"req.user.sub"dy.flight_id,
-        user_id: ,
+        flight_id: body.flight_id,
+        user_id: "req.user.sub",
         purchase_status: "pending",
         uuid: message.request_id,
         quantity: body.quantity,
