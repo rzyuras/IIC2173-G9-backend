@@ -1,4 +1,4 @@
-const { Client } = require('pg');
+const { Client } = require("pg");
 
 class Database {
   constructor(dbname, user, password, host) {
@@ -83,7 +83,7 @@ class Database {
 
   async getPurchase(request_id) {
     const query = `
-            SELECT quantity FROM purchases WHERE uuid = $1
+            SELECT * FROM purchases WHERE uuid = $1
         `;
     const result = await this.client.query(query, [request_id]);
     return result.rows[0];
