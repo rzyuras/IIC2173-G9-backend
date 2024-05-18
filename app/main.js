@@ -229,21 +229,15 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
       // Otro Grupo
     } else if (body.type.includes("other_group_purchase")) {
 
-
       let horaChile = moment.tz(body.departure_time, "YYYY-MM-DD HH:mm", "America/Santiago");
       horaChile = horaChile.utc().format(); 
 
-
-
-
-      console.log("Datos", body.departure_airport, body.arrival_airport, horaChile)
+      console.log("Datos Otro Grupo Compra", body.departure_airport, body.arrival_airport, horaChile)
       const flight = await db.getFlightBydata(
         body.departure_airport,
         body.arrival_airport,
         horaChile
       );
-
-      console.log("Vuelo", flight)
 
       if (flight) {
         await db.insertPurchase({
@@ -254,9 +248,8 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
           quantity: body.quantity,
         });
       }
-      
-
     }
+    
   } catch (error) {
     res.status(500).json({
       message: "An error occurred sending the request(API)",
@@ -269,29 +262,27 @@ app.post("/flights/validation", async (req, res) => {
   try {
     const { body } = req;
 
-    console.log("BODY", body);
+    console.log("Llegada Validación", body);
     const request_id = body.request_id;
 
-    // Delay de 10 segundos
     setTimeout(async () => {
       let validation = Boolean(body.valid);
-
       const purchase = await db.getPurchase(request_id);
-      console.log("PURCHASE", purchase);
-      const flight = await db.getFlight(purchase.flight_id);
-      const flight_tickets = parseInt(flight.flight_tickets);
 
-      if (parseInt(purchase.quantity) > flight_tickets) {
-        validation = false;
-      }
-
-      if (validation) {
-        const purchaseData = await db.updatePurchase(request_id, "approved");
-        await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
-        res.status(200).json({ message: "Purchase validated and flight updated" });
-      } else {
-        await db.updatePurchase(request_id, "rejected");
-        res.status(200).json({ message: "Purchase rejected due to insufficient tickets" });
+      if (purchase) {
+        const flight = await db.getFlight(purchase.flight_id);
+        const flight_tickets = parseInt(flight.flight_tickets);
+        if (parseInt(purchase.quantity) > flight_tickets) {
+          validation = false;
+        }
+        if (validation) {
+          const purchaseData = await db.updatePurchase(request_id, "approved");
+          await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
+          res.status(200).json({ message: "Purchase validated and flight updated" });
+        } else {
+          await db.updatePurchase(request_id, "rejected");
+          res.status(200).json({ message: "Purchase rejected due to insufficient tickets" });
+        }
       }
     }, 10000); // 10000 milisegundos = 10 segundos
 
