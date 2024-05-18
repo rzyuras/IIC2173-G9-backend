@@ -196,8 +196,9 @@ app.get("/purchase", jwtCheck, async (req, res) => {
 app.post("/flights/request", jwtCheck, async (req, res) => {
   try {
     
-    const { body } = req.body;
+    const { body } = req;
     if (body.type.includes("our_group_purchase")) {
+      console.log("body de nuestro grupo", body)
       const flight = await db.getFlight(body.flight_id);
       const message = {
         request_id: uuidv4(),
@@ -228,6 +229,7 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
 
       // Otro Grupo
     } else if (body.type.includes("other_group_purchase")) {
+      console.log("body de otro grupo", body)
 
       let horaChile = moment.tz(body.departure_time, "YYYY-MM-DD HH:mm", "America/Santiago");
       horaChile = horaChile.utc().format(); 
