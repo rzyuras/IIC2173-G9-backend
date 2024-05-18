@@ -196,7 +196,7 @@ app.get("/purchase", jwtCheck, async (req, res) => {
 app.post("/flights/request", jwtCheck, async (req, res) => {
   try {
     
-    const { body } = req;
+    const { body } = req.body;
     if (body.type.includes("our_group_purchase")) {
       const flight = await db.getFlight(body.flight_id);
       const message = {
@@ -212,7 +212,7 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
         quantity: body.quantity,
         seller: 0,
       };
-      console.log("Compra en request: ", req, req.user);
+      console.log("Compra en request: ", message);
       await db.insertPurchase({
         flight_id: body.flight_id,
         user_id: req.auth.payload.sub,
@@ -249,7 +249,7 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
         });
       }
     }
-    
+
   } catch (error) {
     res.status(500).json({
       message: "An error occurred sending the request(API)",
@@ -284,7 +284,7 @@ app.post("/flights/validation", async (req, res) => {
           res.status(200).json({ message: "Purchase rejected due to insufficient tickets" });
         }
       }
-    }, 10000); // 10000 milisegundos = 10 segundos
+    }, 10000);
 
 
   } catch (error) {
