@@ -163,15 +163,11 @@ app.post("/flights", async (req, res) => {
   try {
     let body = req.body;
 
-    console.log("GUardando vuelo: departure y arrival", body.departure_airport_time, body.arrival_airport_time)
     body.departure_airport_time = moment.tz(body.departure_airport_time, "YYYY-MM-DD HH:mm", "America/Santiago");
     body.departure_airport_time = body.departure_airport_time.utc().format();
 
     body.arrival_airport_time = moment.tz(body.arrival_airport_time, "YYYY-MM-DD HH:mm", "America/Santiago");
     body.arrival_airport_time = body.arrival_airport_time.utc().format();
-
-    console.log("GUardando vuelo mod: departure y arrival", body.departure_airport_time, body.arrival_airport_time)
-
 
     
     const flightData = new FlightData(body);
@@ -187,7 +183,6 @@ app.post("/flights", async (req, res) => {
 
 app.get("/purchase", jwtCheck, async (req, res) => {
   try {
-    console.log(req)
     const user_id = req.auth.payload.sub;;
     const purchases = await db.getMyPurchases(user_id);
     res.json({ purchases });
@@ -202,8 +197,6 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
   try {
     
     const { body } = req;
-
-
     if (body.type.includes("our_group_purchase")) {
       const flight = await db.getFlight(body.flight_id);
       const message = {
@@ -219,8 +212,7 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
         quantity: body.quantity,
         seller: 0,
       };
-      console.log(req);
-      console.log(req.user);
+      console.log("Compra en request: ", req, req.user);
       await db.insertPurchase({
         flight_id: body.flight_id,
         user_id: req.auth.payload.sub,
