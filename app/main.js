@@ -209,7 +209,7 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
           .tz("America/Santiago")
           .format("YYYY-MM-DD HH:mm"),
         datetime: moment().tz("America/Santiago").format("YYYY-MM-DD HH:mm"),
-        deposit_token: "",
+        deposit_token: "", // Mandar token de depósito
         quantity: body.quantity,
         seller: 0,
       };
@@ -229,12 +229,10 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
 
       // Otro Grupo
     } else if (body.type.includes("other_group_purchase")) {
-      console.log("body de otro grupo", body)
 
       let horaChile = moment.tz(body.departure_time, "YYYY-MM-DD HH:mm", "America/Santiago");
       horaChile = horaChile.utc().format(); 
 
-      console.log("Datos Otro Grupo Compra", body.departure_airport, body.arrival_airport, horaChile)
       const flight = await db.getFlightBydata(
         body.departure_airport,
         body.arrival_airport,
