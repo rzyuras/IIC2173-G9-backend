@@ -5,7 +5,10 @@ const moment = require("moment-timezone");
 const { auth } = require("express-oauth2-jwt-bearer");
 const cors = require("cors");
 const Database = require("./db");
+const tx = require('./trx');
 require("dotenv").config();
+
+console.log("INstancia tx", tx);
 
 const jwtCheck = auth({
   audience: "https://dev-1op7rfthd5gfwdq8.us.auth0.com/api/v2/",
@@ -195,9 +198,7 @@ app.get("/purchase", jwtCheck, async (req, res) => {
 
 app.post("/flights/request", jwtCheck, async (req, res) => {
   try {
-    
     const { body } = req;
-    if (body.type.includes("our_group_purchase")) {
       console.log("body de nuestro grupo", body)
       const flight = await db.getFlight(body.flight_id);
       const message = {
@@ -214,7 +215,7 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
         seller: 0,
       };
       console.log("Compra en request: ", message);
-      await db.insertPurchase({
+      const purchase = await db.insertPurchase({
         flight_id: body.flight_id,
         user_id: req.auth.payload.sub,
         purchase_status: "pending",
@@ -224,13 +225,27 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
 
       client.publish("flights/requests", JSON.stringify(message));
 
-      // Si no hay error en la petición, responde con un mensaje de éxito (true)
-      res.json({ success: true });
+      const amount = purchase.quantity * flight.price;
 
-      // Otro Grupo
-    } else if (body.type.includes("other_group_purchase")) {
+      // WebPay Integration
+      const ticket = await tx.create(purchase.id, purchase.user_id, amount, "http://localhost:3000/purchase");
 
-      let horaChile = moment.tz(body.departure_time, "YYYY-MM-DD HH:mm", "America/Santiago");
+      res.status(201).json({ 
+        status: ok,
+        ticket: ticket,
+      });
+
+    } catch (error) {
+      res.status(500).json({
+        message: "An error occurred sending the request(API)",
+        error: error.message,
+      });
+    }
+  });
+
+  app.post("/flights/request/other", jwtCheck, async (req, res) => {
+
+    let horaChile = moment.tz(body.departure_time, "YYYY-MM-DD HH:mm", "America/Santiago");
       horaChile = horaChile.utc().format(); 
 
       const flight = await db.getFlightBydata(
@@ -248,15 +263,19 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
           quantity: body.quantity,
         });
       }
-    }
+  });
 
-  } catch (error) {
-    res.status(500).json({
-      message: "An error occurred sending the request(API)",
-      error: error.message,
-    });
+      
+app.post("/commit", async (req, res) => {
+  const { body } = req;
+  if (body.token) {
+   const commitedTx = await tx.commit(body.token);
+  } else {
+    res.status(400).json({ message: "Token not found" });
   }
 });
+
+  
 
 app.post("/flights/validation", async (req, res) => {
   try {

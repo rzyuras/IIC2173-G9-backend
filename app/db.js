@@ -105,6 +105,7 @@ class Database {
             (flight_id, user_id, purchase_status, quantity, uuid) 
             VALUES 
             ($1, $2, $3, $4, $5)
+            RETURNING *;
         `;
     const values = [
       data.flight_id,
@@ -113,7 +114,8 @@ class Database {
       data.quantity,
       data.uuid,
     ];
-    await this.client.query(insertQuery, values);
+    const result = await this.client.query(insertQuery, values);
+    return result.rows[0];
   }
 
   async updatePurchase(request_id, purchase_status) {
