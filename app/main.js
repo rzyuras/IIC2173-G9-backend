@@ -199,7 +199,6 @@ app.get("/purchase", jwtCheck, async (req, res) => {
 app.post("/flights/request", jwtCheck, async (req, res) => {
   try {
     const { body } = req;
-      console.log("body de nuestro grupo", body)
       const flight = await db.getFlight(body.flight_id);
       const message = {
         request_id: uuidv4(),
@@ -239,10 +238,6 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
       res.status(500).json({
         message: "An error occurred processing the request purchase in flight/request",
         error: error.message,
-        errorname: error.name,
-        errorstack: error.stack,
-        errorcode: error.code,
-
       });
     }
   });

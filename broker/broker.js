@@ -5,7 +5,7 @@ const moment = require("moment-timezone");
 
 
 const url_flights = "http://app:3000/flights";
-const url_request = "http://app:3000/flights/request";
+const url_request = "http://app:3000/flights/request/other";
 const url_validation = "http://app:3000/flights/validation";
 
 class MQTTClient {
@@ -77,8 +77,6 @@ class MQTTClient {
           quantity: data.quantity,
           seller: data.seller,
         };
-
-        console.log(payload);
         
         const token = await getToken();
         const response = await axios.post(url_request, payload, {
@@ -100,7 +98,6 @@ class MQTTClient {
           seller: data.seller,
           valid: data.valid,
         };
-        console.log(payload);
 
         await axios.post(url_validation, payload).catch((error) => {
           if (error.response) {
