@@ -10,6 +10,7 @@
     "moment-timezone": "^0.5.45",
     "mqtt": "^5.5.2",
     "pg": "^8.11.5",
+    "transbank-sdk": "^5.0.0",
     "uuid": "^9.0.1"
   }
 }
