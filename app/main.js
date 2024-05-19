@@ -5,7 +5,9 @@ const moment = require("moment-timezone");
 const { auth } = require("express-oauth2-jwt-bearer");
 const cors = require("cors");
 const Database = require("./db");
+const tx = require('./trx');
 require("dotenv").config();
+
 
 const jwtCheck = auth({
   audience: "https://dev-1op7rfthd5gfwdq8.us.auth0.com/api/v2/",
@@ -160,18 +162,15 @@ app.get("/flights/:identifier", async (req, res) => {
 });
 
 app.post("/flights", async (req, res) => {
+
   try {
     let body = req.body;
 
-    console.log("GUardando vuelo: departure y arrival", body.departure_airport_time, body.arrival_airport_time)
     body.departure_airport_time = moment.tz(body.departure_airport_time, "YYYY-MM-DD HH:mm", "America/Santiago");
     body.departure_airport_time = body.departure_airport_time.utc().format();
 
     body.arrival_airport_time = moment.tz(body.arrival_airport_time, "YYYY-MM-DD HH:mm", "America/Santiago");
     body.arrival_airport_time = body.arrival_airport_time.utc().format();
-
-    console.log("GUardando vuelo mod: departure y arrival", body.departure_airport_time, body.arrival_airport_time)
-
 
     
     const flightData = new FlightData(body);
@@ -187,7 +186,6 @@ app.post("/flights", async (req, res) => {
 
 app.get("/purchase", jwtCheck, async (req, res) => {
   try {
-    console.log(req)
     const user_id = req.auth.payload.sub;;
     const purchases = await db.getMyPurchases(user_id);
     res.json({ purchases });
@@ -200,11 +198,8 @@ app.get("/purchase", jwtCheck, async (req, res) => {
 
 app.post("/flights/request", jwtCheck, async (req, res) => {
   try {
-    
     const { body } = req;
-
-
-    if (body.type.includes("our_group_purchase")) {
+      console.log("body de nuestro grupo", body)
       const flight = await db.getFlight(body.flight_id);
       const message = {
         request_id: uuidv4(),
@@ -215,13 +210,12 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
           .tz("America/Santiago")
           .format("YYYY-MM-DD HH:mm"),
         datetime: moment().tz("America/Santiago").format("YYYY-MM-DD HH:mm"),
-        deposit_token: "",
+        deposit_token: "", // Mandar token de depósito
         quantity: body.quantity,
         seller: 0,
       };
-      console.log(req);
-      console.log(req.user);
-      await db.insertPurchase({
+      console.log("Compra en request: ", message);
+      const purchase = await db.insertPurchase({
         flight_id: body.flight_id,
         user_id: req.auth.payload.sub,
         purchase_status: "pending",
@@ -231,27 +225,40 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
 
       client.publish("flights/requests", JSON.stringify(message));
 
-      // Si no hay error en la petición, responde con un mensaje de éxito (true)
-      res.json({ success: true });
+      const amount = purchase.quantity * flight.price;
 
-      // Otro Grupo
-    } else if (body.type.includes("other_group_purchase")) {
+      // WebPay Integration
+      const ticket = await tx.create(String(purchase.id), "test-g9", amount, "http://matiasoliva.me/purchase");
 
+      res.status(201).json({ 
+        status: "ok",
+        ticket: ticket,
+      });
 
-      let horaChile = moment.tz(body.departure_time, "YYYY-MM-DD HH:mm", "America/Santiago");
+    } catch (error) {
+      res.status(500).json({
+        message: "An error occurred processing the request purchase in flight/request",
+        error: error.message,
+        errorname: error.name,
+        errorstack: error.stack,
+        errorcode: error.code,
+
+      });
+    }
+  });
+
+  app.post("/flights/request/other", jwtCheck, async (req, res) => {
+
+    const { body } = req;
+
+    let horaChile = moment.tz(body.departure_time, "YYYY-MM-DD HH:mm", "America/Santiago");
       horaChile = horaChile.utc().format(); 
 
-
-
-
-      console.log("Datos", body.departure_airport, body.arrival_airport, horaChile)
       const flight = await db.getFlightBydata(
         body.departure_airport,
         body.arrival_airport,
         horaChile
       );
-
-      console.log("Vuelo", flight)
 
       if (flight) {
         await db.insertPurchase({
@@ -262,46 +269,71 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
           quantity: body.quantity,
         });
       }
-      
+  });
 
+      
+app.post("/flights/commit", async (req, res) => {
+  try {
+    const ws_token = req.body.ws_token;
+    if (ws_token) {
+      const commitedTx = await tx.commit(ws_token);
+      const purchase = await db.getPurchaseById(commitedTx.buy_order);
+;
+      const message = {
+        "request_id": purchase.uuid,
+        "group_id": "9",
+        "seller": "0",
+        "valid": commitedTx.status === "AUTHORIZED" ? true : false,
+      };
+      client.publish("flights/validation", JSON.stringify(message));
+      res.status(200).json({ message: "Transacción Completada" });
+
+
+    } else {
+      res.status(200).json({ message: "Transacción Anulada por el usuario" });
     }
+    
   } catch (error) {
     res.status(500).json({
-      message: "An error occurred sending the request(API)",
+      message: "An error occurred processing the commit purchase",
       error: error.message,
+      errorname: error.name,
+      errorstack: error.stack,
+      errorcode: error.code,
+      errorstatus: error.status,
+      errorresponse: error.response,
     });
   }
+  
 });
+
+  
 
 app.post("/flights/validation", async (req, res) => {
   try {
     const { body } = req;
-
-    console.log("BODY", body);
     const request_id = body.request_id;
 
-    // Delay de 10 segundos
     setTimeout(async () => {
       let validation = Boolean(body.valid);
+      const purchase = await db.getPurchaseByUuid(request_id);
 
-      const purchase = await db.getPurchase(request_id);
-      console.log("PURCHASE", purchase);
-      const flight = await db.getFlight(purchase.flight_id);
-      const flight_tickets = parseInt(flight.flight_tickets);
-
-      if (parseInt(purchase.quantity) > flight_tickets) {
-        validation = false;
+      if (purchase) {
+        const flight = await db.getFlight(purchase.flight_id);
+        const flight_tickets = parseInt(flight.flight_tickets);
+        if (parseInt(purchase.quantity) > flight_tickets) {
+          validation = false;
+        }
+        if (validation) {
+          const purchaseData = await db.updatePurchase(request_id, "approved");
+          await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
+          res.status(200).json({ message: "Purchase validated and flight updated" });
+        } else {
+          await db.updatePurchase(request_id, "rejected");
+          res.status(200).json({ message: "Purchase rejected due to insufficient tickets" });
+        }
       }
-
-      if (validation) {
-        const purchaseData = await db.updatePurchase(request_id, "approved");
-        await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
-        res.status(200).json({ message: "Purchase validated and flight updated" });
-      } else {
-        await db.updatePurchase(request_id, "rejected");
-        res.status(200).json({ message: "Purchase rejected due to insufficient tickets" });
-      }
-    }, 10000); // 10000 milisegundos = 10 segundos
+    }, 10000);
 
 
   } catch (error) {
