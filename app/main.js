@@ -275,6 +275,7 @@ app.post("/flights/commit", async (req, res) => {
     const ws_token = req.body.ws_token;
     if (ws_token) {
       const commitedTx = await tx.commit(ws_token);
+      console.log("Commited ticket ",commitedTx)
       const purchase = await db.getPurchaseById(commitedTx.buy_order);
 ;
       const message = {
