@@ -209,8 +209,10 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
         quantity: body.quantity,
       });
 
+      console.log("Purchase created: ", purchase);
       // WebPay Integration
-      const ticket = await tx.create(purchase.id, "test-g9", amount, "http://matiasoliva.me/purchase");
+      const ticket = await tx.create(String(purchase.id), "test-g9", amount, "http://matiasoliva.me/purchase");
+      console.log("Ticket created: ", ticket);
 
       const message = {
         request_id: purchase.uuid,
