@@ -200,7 +200,6 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
   try {
     const { body } = req;
       const flight = await db.getFlight(body.flight_id);
-
       const amount = body.quantity * flight.price;
 
       // WebPay Integration
@@ -220,7 +219,7 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
         seller: 0,
       };
 
-      const purchase = await db.insertPurchase({
+      db.insertPurchase({
         flight_id: body.flight_id,
         user_id: req.auth.payload.sub,
         purchase_status: "pending",
