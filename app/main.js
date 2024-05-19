@@ -200,6 +200,20 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
   try {
     const { body } = req;
       const flight = await db.getFlight(body.flight_id);
+    
+      const purchase = await db.insertPurchase({
+        flight_id: body.flight_id,
+        user_id: req.auth.payload.sub,
+        purchase_status: "pending",
+        uuid: message.request_id,
+        quantity: body.quantity,
+      });
+
+      const amount = purchase.quantity * flight.price;
+
+      // WebPay Integration
+      const ticket = await tx.create(String(purchase.id), "test-g9", amount, "http://matiasoliva.me/purchase");
+
       const message = {
         request_id: uuidv4(),
         group_id: "9",
@@ -209,25 +223,14 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
           .tz("America/Santiago")
           .format("YYYY-MM-DD HH:mm"),
         datetime: moment().tz("America/Santiago").format("YYYY-MM-DD HH:mm"),
-        deposit_token: "", // Mandar token de depósito
+        deposit_token: ticket.token,
         quantity: body.quantity,
         seller: 0,
       };
 
-      const purchase = await db.insertPurchase({
-        flight_id: body.flight_id,
-        user_id: req.auth.payload.sub,
-        purchase_status: "pending",
-        uuid: message.request_id,
-        quantity: body.quantity,
-      });
+      console.log("Sending message to broker: ", message)
 
       client.publish("flights/requests", JSON.stringify(message));
-
-      const amount = purchase.quantity * flight.price;
-
-      // WebPay Integration
-      const ticket = await tx.create(String(purchase.id), "test-g9", amount, "http://matiasoliva.me/purchase");
 
       res.status(201).json({ 
         status: "ok",
@@ -292,11 +295,6 @@ app.post("/flights/commit", async (req, res) => {
     res.status(500).json({
       message: "An error occurred processing the commit purchase",
       error: error.message,
-      errorname: error.name,
-      errorstack: error.stack,
-      errorcode: error.code,
-      errorstatus: error.status,
-      errorresponse: error.response,
     });
   }
 });
