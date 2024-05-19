@@ -5,7 +5,7 @@ const Transaction = require('transbank-sdk/dist/es5/transbank/webpay/webpay_plus
 let tx;
 
 if (process.env.NODE_ENV === "production") {
-  tx = new WebpayPlus.Transaction(new Options(IntegrationCommerceCodes.WEBPAY_PLUS, IntegrationApiKeys.WEBPAY, Environment.Production));
+  tx = new WebpayPlus.Transaction(new Options(IntegrationCommerceCodes.WEBPAY_PLUS, IntegrationApiKeys.WEBPAY, Environment.Integration));
 } else {
   if (!global.__tx__) {
     global.__tx__ = new WebpayPlus.Transaction(new Options(IntegrationCommerceCodes.WEBPAY_PLUS, IntegrationApiKeys.WEBPAY, Environment.Integration));

@@ -82,11 +82,19 @@ class Database {
   }
 
 
-  async getPurchase(request_id) {
+  async getPurchaseByUuid(request_id) {
     const query = `
             SELECT * FROM purchases WHERE uuid = $1
         `;
     const result = await this.client.query(query, [request_id]);
+    return result.rows[0];
+  }
+
+  async getPurchaseById(id) {
+    const query = `
+            SELECT * FROM purchases WHERE id = $1
+        `;
+    const result = await this.client.query(query, [id]);
     return result.rows[0];
   }
 

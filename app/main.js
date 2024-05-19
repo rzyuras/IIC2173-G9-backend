@@ -8,7 +8,6 @@ const Database = require("./db");
 const tx = require('./trx');
 require("dotenv").config();
 
-console.log("INstancia tx", tx);
 
 const jwtCheck = auth({
   audience: "https://dev-1op7rfthd5gfwdq8.us.auth0.com/api/v2/",
@@ -163,6 +162,7 @@ app.get("/flights/:identifier", async (req, res) => {
 });
 
 app.post("/flights", async (req, res) => {
+
   try {
     let body = req.body;
 
@@ -228,22 +228,28 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
       const amount = purchase.quantity * flight.price;
 
       // WebPay Integration
-      const ticket = await tx.create(purchase.id, purchase.user_id, amount, "http://localhost:3000/purchase");
+      const ticket = await tx.create(String(purchase.id), "test-g9", amount, "http://localhost:3000/purchase");
 
       res.status(201).json({ 
-        status: ok,
+        status: "ok",
         ticket: ticket,
       });
 
     } catch (error) {
       res.status(500).json({
-        message: "An error occurred sending the request(API)",
+        message: "An error occurred processing the request purchase in flight/request",
         error: error.message,
+        errorname: error.name,
+        errorstack: error.stack,
+        errorcode: error.code,
+
       });
     }
   });
 
   app.post("/flights/request/other", jwtCheck, async (req, res) => {
+
+    const { body } = req;
 
     let horaChile = moment.tz(body.departure_time, "YYYY-MM-DD HH:mm", "America/Santiago");
       horaChile = horaChile.utc().format(); 
@@ -266,13 +272,39 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
   });
 
       
-app.post("/commit", async (req, res) => {
-  const { body } = req;
-  if (body.token) {
-   const commitedTx = await tx.commit(body.token);
-  } else {
-    res.status(400).json({ message: "Token not found" });
+app.post("/flights/commit", async (req, res) => {
+  try {
+    const ws_token = req.body.ws_token;
+    if (ws_token) {
+      const commitedTx = await tx.commit(ws_token);
+      const purchase = await db.getPurchaseById(commitedTx.buy_order);
+;
+      const message = {
+        "request_id": purchase.uuid,
+        "group_id": "9",
+        "seller": "0",
+        "valid": commitedTx.status === "AUTHORIZED" ? true : false,
+      };
+      client.publish("flights/validation", JSON.stringify(message));
+      res.status(200).json({ message: "Transacción Completada" });
+
+
+    } else {
+      res.status(200).json({ message: "Transacción Anulada por el usuario" });
+    }
+    
+  } catch (error) {
+    res.status(500).json({
+      message: "An error occurred processing the commit purchase",
+      error: error.message,
+      errorname: error.name,
+      errorstack: error.stack,
+      errorcode: error.code,
+      errorstatus: error.status,
+      errorresponse: error.response,
+    });
   }
+  
 });
 
   
@@ -280,13 +312,11 @@ app.post("/commit", async (req, res) => {
 app.post("/flights/validation", async (req, res) => {
   try {
     const { body } = req;
-
-    console.log("Llegada Validación", body);
     const request_id = body.request_id;
 
     setTimeout(async () => {
       let validation = Boolean(body.valid);
-      const purchase = await db.getPurchase(request_id);
+      const purchase = await db.getPurchaseByUuid(request_id);
 
       if (purchase) {
         const flight = await db.getFlight(purchase.flight_id);
