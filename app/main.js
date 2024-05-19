@@ -201,7 +201,7 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
     const { body } = req;
       const flight = await db.getFlight(body.flight_id);
 
-      const amount = purchase.quantity * flight.price;
+      const amount = body.quantity * flight.price;
 
       // WebPay Integration
       const ticket = await tx.create(req.auth.payload.sub, "test-g9", amount, "http://matiasoliva.me/purchase");
