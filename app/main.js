@@ -200,19 +200,11 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
   try {
     const { body } = req;
       const flight = await db.getFlight(body.flight_id);
-    
-      const purchase = await db.insertPurchase({
-        flight_id: body.flight_id,
-        user_id: req.auth.payload.sub,
-        purchase_status: "pending",
-        uuid: message.request_id,
-        quantity: body.quantity,
-      });
 
       const amount = purchase.quantity * flight.price;
 
       // WebPay Integration
-      const ticket = await tx.create(String(purchase.id), "test-g9", amount, "http://matiasoliva.me/purchase");
+      const ticket = await tx.create(req.auth.payload.sub, "test-g9", amount, "http://matiasoliva.me/purchase");
 
       const message = {
         request_id: uuidv4(),
@@ -227,6 +219,14 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
         quantity: body.quantity,
         seller: 0,
       };
+
+      const purchase = await db.insertPurchase({
+        flight_id: body.flight_id,
+        user_id: req.auth.payload.sub,
+        purchase_status: "pending",
+        uuid: message.request_id,
+        quantity: body.quantity,
+      });
 
       console.log("Sending message to broker: ", message)
 
