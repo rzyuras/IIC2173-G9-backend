@@ -213,7 +213,7 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
         quantity: body.quantity,
         seller: 0,
       };
-      console.log("Compra en request: ", message);
+
       const purchase = await db.insertPurchase({
         flight_id: body.flight_id,
         user_id: req.auth.payload.sub,
@@ -299,7 +299,6 @@ app.post("/flights/commit", async (req, res) => {
       errorresponse: error.response,
     });
   }
-  
 });
 
   
