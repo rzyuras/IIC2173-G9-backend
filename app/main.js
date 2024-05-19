@@ -228,7 +228,7 @@ app.post("/flights/request", jwtCheck, async (req, res) => {
       const amount = purchase.quantity * flight.price;
 
       // WebPay Integration
-      const ticket = await tx.create(String(purchase.id), "test-g9", amount, "http://localhost:3000/purchase");
+      const ticket = await tx.create(String(purchase.id), "test-g9", amount, "http://matiasoliva.me/purchase");
 
       res.status(201).json({ 
         status: "ok",
