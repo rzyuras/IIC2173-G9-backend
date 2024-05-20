@@ -140,6 +140,7 @@ app.get('/flights', async (req, res) => {
 
     res.json({ flights: selectedFlights });
   } catch (error) {
+    console.log('Error during get flights: ', error)
     res
       .status(500)
       .json({ message: 'Error retrieving flights', error: error.message });
@@ -151,6 +152,7 @@ app.get('/flights/:identifier', async (req, res) => {
     const flight = await db.getFlight(req.params.identifier);
     res.json({ flight });
   } catch (error) {
+    console.log('Error during get flight: ', error);
     res
       .status(500)
       .json({ message: 'Error retrieving flight', error: error.message });
@@ -184,6 +186,7 @@ app.get('/purchase', jwtCheck, async (req, res) => {
     const purchases = await db.getMyPurchases(userId);
     res.json({ purchases });
   } catch (error) {
+    console.log('Error during get purchase: ', error);
     res
       .status(500)
       .json({ message: 'Error retrieving purchases', error: error.message });
@@ -191,6 +194,7 @@ app.get('/purchase', jwtCheck, async (req, res) => {
 });
 
 app.post('/flights/request', jwtCheck, async (req, res) => {
+  console.log('Requesting Purchase')
   try {
     const { body } = req;
     const flight = await db.getFlight(body.flight_id);
@@ -202,11 +206,8 @@ app.post('/flights/request', jwtCheck, async (req, res) => {
       uuid: uuidv4(),
       quantity: body.quantity,
     });
-
-    console.log('Purchase created: ', purchase);
     // WebPay Integration
     const ticket = await tx.create(String(purchase.id), 'test-g9', amount, 'http://matiasoliva.me/purchase');
-    console.log('Ticket created: ', ticket);
 
     const message = {
       request_id: purchase.uuid,
@@ -222,8 +223,6 @@ app.post('/flights/request', jwtCheck, async (req, res) => {
       seller: 0,
     };
 
-    console.log('Sending message to broker: ', message);
-
     client.publish('flights/requests', JSON.stringify(message));
 
     res.status(201).json({
@@ -231,6 +230,7 @@ app.post('/flights/request', jwtCheck, async (req, res) => {
       ticket,
     });
   } catch (error) {
+    console.log('Error during request purchase: ', error)
     res.status(500).json({
       message: 'An error occurred processing the request purchase in flight/request',
       error: error.message,
@@ -239,25 +239,30 @@ app.post('/flights/request', jwtCheck, async (req, res) => {
 });
 
 app.post('/flights/request/other', jwtCheck, async (req) => {
-  const { body } = req;
+  console.log('Requesting Purchase by other groups')
+  try {
+    const { body } = req;
 
-  let horaChile = moment.tz(body.departure_time, 'YYYY-MM-DD HH:mm', 'America/Santiago');
-  horaChile = horaChile.utc().format();
+    let horaChile = moment.tz(body.departure_time, 'YYYY-MM-DD HH:mm', 'America/Santiago');
+    horaChile = horaChile.utc().format();
 
-  const flight = await db.getFlightBydata(
-    body.departure_airport,
-    body.arrival_airport,
-    horaChile,
-  );
+    const flight = await db.getFlightBydata(
+      body.departure_airport,
+      body.arrival_airport,
+      horaChile,
+    );
 
-  if (flight) {
-    await db.insertPurchase({
-      flight_id: flight.id,
-      user_id: 'null',
-      purchase_status: 'pending',
-      uuid: body.request_id,
-      quantity: body.quantity,
-    });
+    if (flight) {
+      await db.insertPurchase({
+        flight_id: flight.id,
+        user_id: 'null',
+        purchase_status: 'pending',
+        uuid: body.request_id,
+        quantity: body.quantity,
+      });
+    }
+  } catch (error) {
+    console.log('Error during request purchase by other groups: ', error);
   }
 });
 
@@ -281,6 +286,7 @@ app.post('/flights/commit', async (req, res) => {
       res.status(200).json({ message: 'Transacción Anulada por el usuario' });
     }
   } catch (error) {
+    console.log('Error during commit purchase: ', error);
     res.status(500).json({
       message: 'An error occurred processing the commit purchase',
       error: error.message,
