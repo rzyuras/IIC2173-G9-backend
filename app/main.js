@@ -9,6 +9,7 @@ const tx = require('./trx');
 require("dotenv").config();
 
 
+
 const jwtCheck = auth({
   audience: "https://dev-1op7rfthd5gfwdq8.us.auth0.com/api/v2/",
   issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
