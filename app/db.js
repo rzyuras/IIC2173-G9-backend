@@ -1,4 +1,4 @@
-const { Client } = require("pg");
+const { Client } = require('pg');
 
 class Database {
   constructor(dbname, user, password, host) {
@@ -30,14 +30,14 @@ class Database {
     return result.rows[0];
   }
 
-  async getFlightBydata(departure, arrival, departure_time) {
+  async getFlightBydata(departure, arrival, departureTime) {
     const query = `
             SELECT * FROM flights WHERE departure_airport_id = $1 AND arrival_airport_id = $2 AND departure_airport_time = $3
         `;
     const result = await this.client.query(query, [
       departure,
       arrival,
-      departure_time,
+      departureTime,
     ]);
     return result.rows[0];
   }
@@ -71,22 +71,21 @@ class Database {
     await this.client.query(insertQuery, values);
   }
 
-  async updateFlight(quantity, flight_id) {
+  async updateFlight(quantity, flightId) {
     const updateQuery = `
             UPDATE flights
             SET flight_tickets = flight_tickets - $1
             WHERE id = $2
         `;
-    const values = [quantity, flight_id];
+    const values = [quantity, flightId];
     await this.client.query(updateQuery, values);
   }
 
-
-  async getPurchaseByUuid(request_id) {
+  async getPurchaseByUuid(requestId) {
     const query = `
             SELECT * FROM purchases WHERE uuid = $1
         `;
-    const result = await this.client.query(query, [request_id]);
+    const result = await this.client.query(query, [requestId]);
     return result.rows[0];
   }
 
@@ -98,12 +97,11 @@ class Database {
     return result.rows[0];
   }
 
-
-  async getMyPurchases(user_id) {
+  async getMyPurchases(userId) {
     const query = `
             SELECT * FROM purchases WHERE user_id = $1
         `;
-    const result = await this.client.query(query, [user_id]);
+    const result = await this.client.query(query, [userId]);
     return result.rows;
   }
 
@@ -126,7 +124,7 @@ class Database {
     return result.rows[0];
   }
 
-  async updatePurchase(request_id, purchase_status) {
+  async updatePurchase(requestId, purchaseStatus) {
     const updateQuery = `
         UPDATE purchases
         SET purchase_status = $1  
@@ -134,14 +132,13 @@ class Database {
         RETURNING quantity, flight_id;
     `;
     const result = await this.client.query(updateQuery, [
-      purchase_status,
-      request_id,
+      purchaseStatus,
+      requestId,
     ]);
     if (result.rows.length > 0) {
       return result.rows[0]; // Devuelve la fila actualizada
-    } else {
-      return null; // O manejar según corresponda cuando no hay filas actualizadas
     }
+    return null; // O manejar según corresponda cuando no hay filas actualizadas
   }
 
   async close() {
