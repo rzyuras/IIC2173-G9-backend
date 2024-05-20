@@ -2,7 +2,8 @@
     "dependencies": {
       "@bull-board/api": "^5.17.1",
       "@bull-board/express": "^5.17.1",
-      "bullmq": "^5.7.9"
+      "bullmq": "^5.7.9",
+      "express": "^4.19.2"
     }
 }
   
