@@ -26,3 +26,29 @@ CREATE TABLE IF NOT EXISTS purchases (
       uuid VARCHAR(255),
       FOREIGN KEY (flight_id) REFERENCES flights(id)
     );
+
+
+CREATE OR REPLACE FUNCTION function_approved()
+RETURN trigger AS $$
+DECLARE
+  payload TEXT;
+BEGIN
+  -- contriyendo el mensaje
+  payload := json_build_object(
+    'user_id', NEW.user_id;
+    'flight_id', NEW.user_id
+  )::text;
+
+  -- Enviamos la notificion
+  PERFORM pg_notify('table_update', payload)
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER purchase_approved
+AFTER UPDATE OF purchase_status
+ON purchases
+FOR EACH ROW
+WHEN (NEW.purchase_status = 'approved')
+EXECUTE FUNCTION function_approved();

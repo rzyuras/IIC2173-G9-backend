@@ -17,21 +17,6 @@ const jwtCheck = auth({
   issuer: process.env.AUTH0_ISSUER_BASE_URL,
 });
 
-const corsOptions = {
-  origin: '*',
-  allowHeaders: [
-    'Access-Control-Allow-Headers',
-    'Origin',
-    'Accept',
-    'X-Requested-With',
-    'Content-Type',
-    'Access-Control-Request-Method',
-    'Access-Control-Request-Headers',
-    'Auth',
-  ],
-  allowMethods: ['GET', 'HEAD', 'OPTIONS', 'PUT', 'POST', 'DELETE', 'PATCH'],
-};
-
 // Datos de conexión PostgreSQL
 const pgDbname = process.env.DATABASE_NAME;
 const pgUser = process.env.DATABASE_USER;
@@ -60,10 +45,14 @@ client.on('error', (error) => {
   console.error(`An error occurred: ${error}`);
 });
 
+client.on('notification', (msg) => {
+  const payload = JSON.parse(msg.payload);
+  console.log('Received message: ', payload);
+});
+
 // Crea una instancia de Express y la almacena en la variable app.
 const app = express();
 app.use(express.json()); // Middleware para parsear JSON
-app.use(cors(corsOptions));
 
 class FlightData {
   constructor(data) {
