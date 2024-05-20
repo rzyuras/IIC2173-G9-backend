@@ -18,9 +18,9 @@ const flightsQueue = new Queue('flights recommendation', {
   // 4. Calcular la distancia y ordenar según el precio y distancia.
   // 5. Obtener las 3 mejores recomendaciones.
 
-async function produceRecommendation(userId, latitudIp, longitudeIp, lastFlight) {
+async function produceRecommendation(userId, latitudeIp, longitudeIp, lastFlight) {
   await flightsQueue.add('recommendation', {
-    userId, latitudIp, longitudeIp, lastFlight,
+    userId, latitudeIp, longitudeIp, lastFlight
   });
   console.log(`Added recommendation job for user IP ${userId}`);
 }
