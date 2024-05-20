@@ -11,6 +11,10 @@
     "mqtt": "^5.5.2",
     "pg": "^8.11.5",
     "transbank-sdk": "^5.0.0",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "@bull-board/api": "^5.17.1",
+    "@bull-board/express": "^5.17.1",
+    "bullmq": "^5.7.9"
   }
 }
+
