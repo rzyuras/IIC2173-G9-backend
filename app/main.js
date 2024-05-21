@@ -7,7 +7,7 @@ const { auth } = require('express-oauth2-jwt-bearer');
 const Database = require('./db');
 const tx = require('./trx');
 const cors = require('cors');
-const produceRecommendation = require('./producers');
+const { produceRecommendation } = require('./producers');
 require('dotenv').config();
 
 const jwtCheck = auth({
@@ -48,16 +48,15 @@ const mqttPassword = process.env.MQTT_PASSWORD;
 const db = new Database(pgDbname, pgUser, pgPassword, pgHost);
 db.connect();
 
-db.client.on('notification', (msg) => {
+db.client.on('notification', async (msg) => {
   const payload = JSON.parse(msg.payload);
   const userId = payload.user_id;
   const flightId = payload.flight_id; // arreglar
-  const lastFlight = db.getFlight(flightId);
+  const lastFlight = await db.getFlight(flightId);
   const latitudeIp = payload.latitude_ip;
   const longitudeIp = payload.longitude_ip;
   console.log('Received message: ', payload);
   produceRecommendation(userId, latitudeIp, longitudeIp, lastFlight);
-
 });
 
 db.client.query('LISTEN table_update');
@@ -223,7 +222,7 @@ app.post('/flights/request', jwtCheck, async (req, res) => {
       quantity: body.quantity,
     });
     // WebPay Integration
-    const ticket = await tx.create(String(purchase.id), 'test-g9', amount, `http://${process.env.BASE_URL}/purchase`);
+    const ticket = await tx.create(String(purchase.id), 'test-g9', amount, `http://${process.env.BASE_FRONT_URL}/purchase`);
 
     const message = {
       request_id: purchase.uuid,
@@ -351,7 +350,7 @@ app.post('/flights/validation', async (req, res) => {
           res.status(200).json({ message: 'Purchase rejected due to insufficient tickets' });
         }
       }
-    }, 10000);
+    }, 1000);
   } catch (error) {
     console.log('Error during validation: ', error);
     res.status(500).json({

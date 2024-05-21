@@ -1,4 +1,4 @@
-const { Worker } = require('bullmq');
+const { Worker, Job } = require('bullmq');
 const axios = require('axios');
 require('dotenv').config();
 
@@ -9,13 +9,16 @@ const connection = {
 };
 
 const worker = new Worker('flightsRecommendation', async (job) => {
+  console.log('Worker received job:', job.id); // Log del recibo del trabajo
+
   const { userId, latitudeIp, longitudeIp, lastFlight } = job.data;
   const sameDepartureFlightsUrl = `http://app:3000/flights?departure=${lastFlight.arrival_airport_id}`;
   
   try {
     const response = await axios.get(sameDepartureFlightsUrl);
     const sameDepartureFlights = response.data;
-    
+    console.log('Fetched same departure flights:', sameDepartureFlights.length);
+
     // Paso 2: Obtener los últimos 20 vuelos que salgan dentro de la semana después de la compra
     const lastFlights = sameDepartureFlights.filter((flight) => {
       const lastArrivalTime = new Date(lastFlight.arrival_airport_time);
@@ -24,6 +27,7 @@ const worker = new Worker('flightsRecommendation', async (job) => {
 
       return lastArrivalTime < flightDepartureTime && timeDiffInDays <= 7;
     }).slice(0, 20);  // Revisar
+    console.log('Filtered last flights:', lastFlights.length);
 
     // Paso 3: Obtener las coordenadas de los aeropuertos de destino de los últimos 20 vuelos
     const flightCoordinatesPromises = lastFlights.map(async (flight) => {
@@ -34,6 +38,7 @@ const worker = new Worker('flightsRecommendation', async (job) => {
     });
 
     const flightsWithCoordinates = await Promise.all(flightCoordinatesPromises);
+    console.log('Got coordinates for flights:', flightsWithCoordinates.length);
 
     // Paso 4: Calcular la distancia y ordenar según el precio y distancia
     const calculateDistance = (coord1, coord2) => {
@@ -59,9 +64,11 @@ const worker = new Worker('flightsRecommendation', async (job) => {
       const pond = distance / flight.price;
       return { ...flight, distance, pond };
     });
+    console.log('Calculated ponder for flights:', flightsWithPonder.length);
 
     // Paso 5: Ordenar y obtener las 3 mejores recomendaciones
     const top3Flights = flightsWithPonder.sort((a, b) => a.pond - b.pond).slice(0, 3);
+    console.log('Top 3 flights:', top3Flights);
 
     return top3Flights;
   } catch (error) {
@@ -70,4 +77,3 @@ const worker = new Worker('flightsRecommendation', async (job) => {
   }
 }, { connection });
 
-console.log("Worker is listening for jobs...");
