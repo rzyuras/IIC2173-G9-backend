@@ -13,7 +13,6 @@ const worker = new Worker('flights recommendation', async (job) => {
 
   const { userId, latitudeIp, longitudeIp, lastFlight } = job.data;
   const sameDepartureFlightsUrl = `http://app:3000/flights?departure=${lastFlight.arrival_airport_id}`;
-  console.log(lastFlight.arrival_airport_id)
   
   try {
     const response = await axios.get(sameDepartureFlightsUrl);
@@ -21,7 +20,6 @@ const worker = new Worker('flights recommendation', async (job) => {
       throw new Error('No data found');
     } else {
       const sameDepartureFlights = response.data.flights;
-      console.log('data:', response.data)
       console.log('Fetched same departure flights:', sameDepartureFlights.length);
 
       // Paso 2: Obtener los últimos 20 vuelos que salgan dentro de la semana después de la compra
@@ -39,34 +37,29 @@ const worker = new Worker('flights recommendation', async (job) => {
         const geoCodeUrl = `https://geocode.maps.co/search?q=${encodeURIComponent(flight.arrival_airport_name)}&api_key=${process.env.GEOCODE_API_KEY}`;
         console.log("geocode:", geoCodeUrl)
         const geoResponse = await fetch(geoCodeUrl);
-        const location = geoResponse.json();
-        return { ...flight, latitude: location.lat, longitude: location.lon };
+        const location = await geoResponse.json();
+        return { ...flight, latitude: location[0].lat, longitude: location[0].lon };
       });
 
       const flightsWithCoordinates = await Promise.all(flightCoordinatesPromises);
       console.log('Got coordinates for flights:', flightsWithCoordinates.length);
 
       // Paso 4: Calcular la distancia y ordenar según el precio y distancia
-      const calculateDistance = (coord1, coord2) => {
-        const R = 6371e3; // Radio de la Tierra en metros
-        const φ1 = coord1.latitude * Math.PI / 180;
-        const φ2 = coord2.latitude * Math.PI / 180;
-        const Δφ = (coord2.latitude - coord1.latitude) * Math.PI / 180;
-        const Δλ = (coord2.longitude - coord1.longitude) * Math.PI / 180;
-
-        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                  Math.cos(φ1) * Math.cos(φ2) *
-                  Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-        const distance = R * c; // Distancia en metros
-        return distance;
+      const toRadians = (degrees) => degrees * (Math.PI / 180);
+      const calculateDistance = (lat1, lon1, lat2, lon2) => {
+          const R = 6371; // Radio de la Tierra en km
+          const dLat = toRadians(lat2 - lat1);
+          const dLon = toRadians(lon2 - lon1);
+          const a = 
+              Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          return R * c; // Distancia en km
       };
 
-      const ipCoord = { latitude: latitudeIp, longitude: longitudeIp };
       const flightsWithPonder = flightsWithCoordinates.map((flight) => {
-        const flightCoord = { latitude: flight.latitude, longitude: flight.longitude };
-        const distance = calculateDistance(ipCoord, flightCoord);
+        const distance = calculateDistance(latitudeIp, longitudeIp, flight.latitude, flight.longitude);
         const pond = distance / flight.price;
         return { ...flight, distance, pond };
       });
