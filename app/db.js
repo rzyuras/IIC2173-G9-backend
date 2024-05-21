@@ -124,10 +124,10 @@ class Database {
     return result.rows[0];
   }
 
-  async updatePurchase(requestId, purchaseStatus) {
+  async updatePurchaseStatus(requestId, purchaseStatus) {
     const updateQuery = `
         UPDATE purchases
-        SET purchase_status = $1  
+        SET purchase_status = $1
         WHERE uuid = $2
         RETURNING quantity, flight_id;
     `;
@@ -139,6 +139,20 @@ class Database {
       return result.rows[0]; // Devuelve la fila actualizada
     }
     return null; // O manejar según corresponda cuando no hay filas actualizadas
+  }
+
+  async updatePurchaseDir(requestId, latitudeIp, longitudeIp) {
+    const updateQuery = `
+        UPDATE purchases
+        SET latitudeIp = $1,
+            longitudeIp = $2
+        WHERE uuid = $3;
+    `;
+    await this.client.query(updateQuery, [
+      latitudeIp,
+      longitudeIp,
+      requestId,
+    ]);
   }
 
   async close() {

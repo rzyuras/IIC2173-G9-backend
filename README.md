@@ -11,6 +11,11 @@ Para iniciar todos los servicios definidos en el `docker-compose.yml` en modo de
 docker-compose up -d
 ```
 
+Para hacer un rebuild:
+```bash
+docker-compose up -d -build
+```
+
 Para borrar todo lo relacionado con docker:
 ```bash
 docker stop $(docker ps -aq)
@@ -18,18 +23,32 @@ docker rm $(docker ps -aq)
 docker volume rm $(docker volume ls -q)
 docker system prune -a --volumes
 ```
+## Docker Bash
+#### Encuentrar el ID del contenedor:
+```bash
+docker ps:
+```
 
-### Lint
 
-## Revisar errores con ESLint
-Para revisar errores de ESLint en el entorno local se debe utilizar:
+#### Accede al contenedor:
+```bash
+docker exec -it <container_id> bash
+```
+
+#### Accede a la base de datos PostgreSQL:
+```bash
+psql -U postgres -d mydatabase
+```
+## EsLint
+#### Revisar errores con ESLint
 ```bash
 npm run lint
 ```
 
- ## Corregir errores automaticamente
+#### Corregir errores automaticamente
 ```bash
 npm run lint -- --fix
 ```
+
 
 

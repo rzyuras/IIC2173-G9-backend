@@ -20,12 +20,14 @@ services:
       MQTT_USER: ${MQTT_USER}
       MQTT_PASSWORD: ${MQTT_PASSWORD}
       AUTH0_ISSUER_BASE_URL: ${AUTH0_ISSUER_BASE_URL}
-      BASE_URL: ${BASE_URL}
+      BASE_FRONT_URL: ${BASE_FRONT_URL}
       AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID}
       SESSION_SECRET: ${SESSION_SECRET}
       REDIS_PORT: ${REDIS_PORT}
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+    deploy:
+      replicas: 1
 
     
   db:
@@ -40,6 +42,8 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    deploy:
+      replicas: 1
 
   broker:
     build:
@@ -59,6 +63,8 @@ services:
       DATABASE_USER: ${DATABASE_USER}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD}
       DATABASE_NAME: ${DATABASE_NAME}
+    deploy:
+      replicas: 1
     
   board:
     build:
@@ -76,6 +82,8 @@ services:
       REDIS_PORT: ${REDIS_PORT}
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+    deploy:
+      replicas: 1
 
   consumer:
     build:
@@ -91,6 +99,9 @@ services:
       REDIS_PORT: ${REDIS_PORT}
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+      GEOCODE_API_KEY: ${GEOCODE_API_KEY}
+    deploy:
+      replicas: 1
   
   redis:
     image: redis
@@ -100,6 +111,8 @@ services:
       - 6379:6379
     networks:
       - app-network
+    deploy:
+      replicas: 1
     
 
 
