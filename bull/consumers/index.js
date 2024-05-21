@@ -1,4 +1,4 @@
-const { Worker, Jobs } = require('bullmq');
+const { Worker } = require('bullmq');
 const axios = require('axios');
 
 const connection = {
@@ -7,13 +7,14 @@ const connection = {
   password: process.env.REDIS_PASSWORD,
 };
 
-const worker = new Worker('flightsRecommendation', connection, async (job) => {
+const worker = new Worker('flightsRecommendation', async (job) => {
   const { userId, latitudeIp, longitudeIp, lastFlight } = job.data;
   const sameDepartureFlightsUrl = `http://app:3000/flights?departure=${lastFlight.arrival_airport_id}`;
   
-
   try {
-    const sameDepartureFlights = await axios.get(sameDepartureFlightsUrl);
+    const response = await axios.get(sameDepartureFlightsUrl);
+    const sameDepartureFlights = response.data;
+    
     const lastFlights = sameDepartureFlights.filter(
       (flight) => {
         const lastArrivalTime = new Date(lastFlight.arrival_airport_time);
@@ -21,13 +22,12 @@ const worker = new Worker('flightsRecommendation', connection, async (job) => {
         const timeDiffInDays = Math.abs(lastArrivalTime - flightDepartureTime) / (1000 * 60 * 60 * 24);
 
         return lastArrivalTime < flightDepartureTime && timeDiffInDays <= 7;
-      },
-    );
-
+      }).slice(0,20);
     return lastFlights;
   } catch (error) {
     console.error(`Error while fetching flights: ${error}`);
+    throw error;
   }
-});
+}, { connection });
 
-
+console.log("Worker is listening for jobs...");

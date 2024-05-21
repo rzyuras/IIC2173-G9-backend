@@ -54,7 +54,7 @@ class MQTTClient {
         // Es aceptable dejar el console.error aquí para el registro de errores
         // eslint-disable-next-line no-console
         console.error(
-          `An error occurred while processing the message: ${error}`,
+          `An error occurred while sending the flight message: ${error}`,
         );
       }
     } else if (topic === 'flights/requests') {
@@ -82,7 +82,7 @@ class MQTTClient {
         });
       } catch (error) {
         console.error(
-          `An error occurred while processing the messages: ${error}`,
+          `An error occurred while processing the other group request messages: ${error}`,
         );
       }
     } else if (topic === 'flights/validation') {

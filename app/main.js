@@ -6,6 +6,7 @@ const moment = require('moment-timezone');
 const { auth } = require('express-oauth2-jwt-bearer');
 const Database = require('./db');
 const tx = require('./trx');
+const cors = require('cors');
 require('dotenv').config();
 
 const jwtCheck = auth({
@@ -17,6 +18,21 @@ const jwtCheck = auth({
   issuer: process.env.AUTH0_ISSUER_BASE_URL,
 });
 
+const corsOptions = {
+  origin: '*',
+  allowHeaders: [
+    'Access-Control-Allow-Headers',
+    'Origin',
+    'Accept',
+    'X-Requested-With',
+    'Content-Type',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers',
+    'Auth',
+  ],
+  allowMethods: ['GET', 'HEAD', 'OPTIONS', 'PUT', 'POST', 'DELETE', 'PATCH'],
+};
+
 // Datos de conexión PostgreSQL
 const pgDbname = process.env.DATABASE_NAME;
 const pgUser = process.env.DATABASE_USER;
@@ -26,10 +42,25 @@ const mqttBroker = process.env.MQTT_BROKER;
 const mqttPort = process.env.MQTT_PORT;
 const mqttUser = process.env.MQTT_USER;
 const mqttPassword = process.env.MQTT_PASSWORD;
+const produceRecommendation = require('./producer');
 
 // Crear instancia de Database
 const db = new Database(pgDbname, pgUser, pgPassword, pgHost);
 db.connect();
+
+db.client.on('notification', (msg) => {
+  const payload = JSON.parse(msg.payload);
+  const userId = payload.user_id;
+  const flightId = payload.flight_id; // arreglar
+  const lastFlight = db.
+  const latitudeIp = payload.latitude_ip;
+  const longitudeIp = payload.longitude_ip;
+  console.log('Received message: ', payload);
+  produceRecommendation(userId, flightId, latitudeIp, longitudeIp);
+
+});
+
+db.client.query('LISTEN table_update');
 
 // Conectarse al Broker
 const client = mqtt.connect(`mqtt://${mqttBroker}:${mqttPort}`, {
@@ -45,14 +76,10 @@ client.on('error', (error) => {
   console.error(`An error occurred: ${error}`);
 });
 
-client.on('notification', (msg) => {
-  const payload = JSON.parse(msg.payload);
-  console.log('Received message: ', payload);
-});
-
 // Crea una instancia de Express y la almacena en la variable app.
 const app = express();
 app.use(express.json()); // Middleware para parsear JSON
+app.use(cors(corsOptions));
 
 class FlightData {
   constructor(data) {
@@ -185,7 +212,7 @@ app.get('/purchase', jwtCheck, async (req, res) => {
 app.post('/flights/request', jwtCheck, async (req, res) => {
   console.log('Requesting Purchase');
   try {
-    const { body } = req;
+    const body = req.body;
     const flight = await db.getFlight(body.flight_id);
     const amount = body.quantity * flight.price;
     const purchase = await db.insertPurchase({
@@ -196,13 +223,13 @@ app.post('/flights/request', jwtCheck, async (req, res) => {
       quantity: body.quantity,
     });
     // WebPay Integration
-    const ticket = await tx.create(String(purchase.id), 'test-g9', amount, 'http://matiasoliva.me/purchase');
+    const ticket = await tx.create(String(purchase.id), 'test-g9', amount, `http://${process.env.BASE_URL}/purchase`);
 
     const message = {
       request_id: purchase.uuid,
       group_id: '9',
-      departure_airport: flight.departure_airport_name,
-      arrival_airport: flight.arrival_airport_name,
+      departure_airport: flight.departure_airport_id,
+      arrival_airport: flight.arrival_airport_id,
       departure_time: moment(flight.departure_airport_time)
         .tz('America/Santiago')
         .format('YYYY-MM-DD HH:mm'),
@@ -212,6 +239,7 @@ app.post('/flights/request', jwtCheck, async (req, res) => {
       seller: 0,
     };
 
+    db.updatePurchaseDir(purchase.uuid, body.latitudeIp, body.longitudeIp);
     client.publish('flights/requests', JSON.stringify(message));
 
     res.status(201).json({
@@ -230,22 +258,21 @@ app.post('/flights/request', jwtCheck, async (req, res) => {
 app.post(
   '/flights/request/other',
   jwtCheck,
-  body('request_id').notEmpty().isAlphanumeric(),
+  body('request_id').notEmpty().isAscii(),
   body('group_id').notEmpty().isInt(),
-  body('departure_airport').notEmpty().isAlpha(),
-  body('arrival_airport').notEmpty().isAlpha(),
-  body('departure_time').notEmpty().isTime(),
-  body('datetime').notEmpty().isDate(),
+  body('departure_airport').notEmpty().isAscii(),
+  body('arrival_airport').notEmpty().isAscii(),
+  body('departure_time').notEmpty().matches(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/),
+  body('datetime').notEmpty().isAscii(),
   body('deposit_token').notEmpty(),
   body('quantity').notEmpty().isInt(),
   body('seller').notEmpty(),
   async (req) => {
     try {
+      const { body } = req;
       const result = validationResult(req);
-      if (!result.isEmpty()) {
-        console.log('Requesting Purchase by other groups');
 
-        const { body } = req;
+      if (result.isEmpty() && body.group_id !== '9') {
         let horaChile = moment.tz(body.departure_time, 'YYYY-MM-DD HH:mm', 'America/Santiago');
         horaChile = horaChile.utc().format();
 
@@ -265,7 +292,7 @@ app.post(
           });
         }
       } else {
-        console.log('Invalid data', result.array());
+        console.log(`Invalid data request from group ${body.group_id}`);
       }
     } catch (error) {
       console.log('Error during request purchase by other groups: ', error);
@@ -275,10 +302,9 @@ app.post(
 
 app.post('/flights/commit', async (req, res) => {
   try {
-    const { wsToken } = req.body;
+    const wsToken = req.body.ws_token;
     if (wsToken) {
       const commitedTx = await tx.commit(wsToken);
-      console.log('Commited ticket ', commitedTx);
       const purchase = await db.getPurchaseById(commitedTx.buy_order);
 
       const message = {
@@ -290,8 +316,8 @@ app.post('/flights/commit', async (req, res) => {
       client.publish('flights/validation', JSON.stringify(message));
       res.status(200).json({ message: 'Transacción Completada' });
     } else {
-      res.status(200).json({ message: 'Transacción Anulada por el usuario' });
-    }
+      res.status(200).json({ message: 'La transacción no fue completada'},);
+    } 
   } catch (error) {
     console.log('Error during commit purchase: ', error);
     res.status(500).json({
@@ -303,8 +329,8 @@ app.post('/flights/commit', async (req, res) => {
 
 app.post('/flights/validation', async (req, res) => {
   try {
-    const { body } = req;
-    const { requestId } = body;
+    const body = req.body;
+    const requestId = body.request_id;
 
     setTimeout(async () => {
       let validation = Boolean(body.valid);
@@ -317,7 +343,7 @@ app.post('/flights/validation', async (req, res) => {
           validation = false;
         }
         if (validation) {
-          const purchaseData = await db.updatePurchase(requestId, 'approved');
+          const purchaseData = await db.updatePurchaseStatus(requestId, 'approved');
           await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
           res.status(200).json({ message: 'Purchase validated and flight updated' });
         } else {
