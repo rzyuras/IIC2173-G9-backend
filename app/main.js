@@ -1,9 +1,9 @@
 const express = require('express');
+const { validationResult, body } = require('express-validator');
 const mqtt = require('mqtt');
 const { v4: uuidv4 } = require('uuid');
 const moment = require('moment-timezone');
 const { auth } = require('express-oauth2-jwt-bearer');
-const cors = require('cors');
 const Database = require('./db');
 const tx = require('./trx');
 require('dotenv').config();
@@ -129,7 +129,7 @@ app.get('/flights', async (req, res) => {
 
     res.json({ flights: selectedFlights });
   } catch (error) {
-    console.log('Error during get flights: ', error)
+    console.log('Error during get flights: ', error);
     res
       .status(500)
       .json({ message: 'Error retrieving flights', error: error.message });
@@ -183,7 +183,7 @@ app.get('/purchase', jwtCheck, async (req, res) => {
 });
 
 app.post('/flights/request', jwtCheck, async (req, res) => {
-  console.log('Requesting Purchase')
+  console.log('Requesting Purchase');
   try {
     const { body } = req;
     const flight = await db.getFlight(body.flight_id);
@@ -219,7 +219,7 @@ app.post('/flights/request', jwtCheck, async (req, res) => {
       ticket,
     });
   } catch (error) {
-    console.log('Error during request purchase: ', error)
+    console.log('Error during request purchase: ', error);
     res.status(500).json({
       message: 'An error occurred processing the request purchase in flight/request',
       error: error.message,
@@ -227,33 +227,51 @@ app.post('/flights/request', jwtCheck, async (req, res) => {
   }
 });
 
-app.post('/flights/request/other', jwtCheck, async (req) => {
-  console.log('Requesting Purchase by other groups')
-  try {
-    const { body } = req;
+app.post(
+  '/flights/request/other',
+  jwtCheck,
+  body('request_id').notEmpty().isAlphanumeric(),
+  body('group_id').notEmpty().isInt(),
+  body('departure_airport').notEmpty().isAlpha(),
+  body('arrival_airport').notEmpty().isAlpha(),
+  body('departure_time').notEmpty().isTime(),
+  body('datetime').notEmpty().isDate(),
+  body('deposit_token').notEmpty(),
+  body('quantity').notEmpty().isInt(),
+  body('seller').notEmpty(),
+  async (req) => {
+    try {
+      const result = validationResult(req);
+      if (!result.isEmpty()) {
+        console.log('Requesting Purchase by other groups');
 
-    let horaChile = moment.tz(body.departure_time, 'YYYY-MM-DD HH:mm', 'America/Santiago');
-    horaChile = horaChile.utc().format();
+        const { body } = req;
+        let horaChile = moment.tz(body.departure_time, 'YYYY-MM-DD HH:mm', 'America/Santiago');
+        horaChile = horaChile.utc().format();
 
-    const flight = await db.getFlightBydata(
-      body.departure_airport,
-      body.arrival_airport,
-      horaChile,
-    );
+        const flight = await db.getFlightBydata(
+          body.departure_airport,
+          body.arrival_airport,
+          horaChile,
+        );
 
-    if (flight) {
-      await db.insertPurchase({
-        flight_id: flight.id,
-        user_id: 'null',
-        purchase_status: 'pending',
-        uuid: body.request_id,
-        quantity: body.quantity,
-      });
+        if (flight) {
+          await db.insertPurchase({
+            flight_id: flight.id,
+            user_id: 'null',
+            purchase_status: 'pending',
+            uuid: body.request_id,
+            quantity: body.quantity,
+          });
+        }
+      } else {
+        console.log('Invalid data', result.array());
+      }
+    } catch (error) {
+      console.log('Error during request purchase by other groups: ', error);
     }
-  } catch (error) {
-    console.log('Error during request purchase by other groups: ', error);
-  }
-});
+  },
+);
 
 app.post('/flights/commit', async (req, res) => {
   try {

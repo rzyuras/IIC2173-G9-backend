@@ -1,3 +1,4 @@
+-- flights table
 CREATE TABLE IF NOT EXISTS flights (
       id SERIAL PRIMARY KEY,
       departure_airport_name VARCHAR(255),
@@ -17,6 +18,7 @@ CREATE TABLE IF NOT EXISTS flights (
       flight_tickets INT DEFAULT 90
     );
 
+-- purchase table
 CREATE TABLE IF NOT EXISTS purchases (
       id SERIAL PRIMARY KEY,
       flight_id INT,
@@ -28,24 +30,24 @@ CREATE TABLE IF NOT EXISTS purchases (
     );
 
 
+-- trigger function
 CREATE OR REPLACE FUNCTION function_approved()
-RETURN trigger AS $$
+RETURNS trigger AS $$
 DECLARE
   payload TEXT;
 BEGIN
-  -- contriyendo el mensaje
   payload := json_build_object(
-    'user_id', NEW.user_id;
+    'user_id', NEW.user_id
     'flight_id', NEW.user_id
   )::text;
 
-  -- Enviamos la notificion
-  PERFORM pg_notify('table_update', payload)
+  PERFORM pg_notify('table_update', payload);
   
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
+-- trigger
 CREATE TRIGGER purchase_approved
 AFTER UPDATE OF purchase_status
 ON purchases

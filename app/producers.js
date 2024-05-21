@@ -20,7 +20,7 @@ const flightsQueue = new Queue('flights recommendation', {
 
 async function produceRecommendation(userId, latitudeIp, longitudeIp, lastFlight) {
   await flightsQueue.add('recommendation', {
-    userId, latitudeIp, longitudeIp, lastFlight
+    userId, latitudeIp, longitudeIp, lastFlight,
   });
   console.log(`Added recommendation job for user IP ${userId}`);
 }

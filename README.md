@@ -11,6 +11,11 @@ Para iniciar todos los servicios definidos en el `docker-compose.yml` en modo de
 docker-compose up -d
 ```
 
+Para hacer un rebuild:
+```bash
+docker-compose up -d -build
+```
+
 Para borrar todo lo relacionado con docker:
 ```bash
 docker stop $(docker ps -aq)

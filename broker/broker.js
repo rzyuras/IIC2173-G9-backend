@@ -105,7 +105,7 @@ class MQTTClient {
           } else if (error.request) {
             console.log(
               'La solicitud fue hecha pero no se recibió respuesta',
-              error.request,
+              error.message,
             );
           } else {
             console.log('Error al hacer la solicitud:', error.message);
