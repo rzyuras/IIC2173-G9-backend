@@ -7,6 +7,7 @@ const { auth } = require('express-oauth2-jwt-bearer');
 const Database = require('./db');
 const tx = require('./trx');
 const cors = require('cors');
+const produceRecommendation = require('./producers');
 require('dotenv').config();
 
 const jwtCheck = auth({
@@ -42,7 +43,6 @@ const mqttBroker = process.env.MQTT_BROKER;
 const mqttPort = process.env.MQTT_PORT;
 const mqttUser = process.env.MQTT_USER;
 const mqttPassword = process.env.MQTT_PASSWORD;
-const produceRecommendation = require('./producer');
 
 // Crear instancia de Database
 const db = new Database(pgDbname, pgUser, pgPassword, pgHost);
@@ -52,11 +52,11 @@ db.client.on('notification', (msg) => {
   const payload = JSON.parse(msg.payload);
   const userId = payload.user_id;
   const flightId = payload.flight_id; // arreglar
-  const lastFlight = db.
+  const lastFlight = db.getFlight(flightId);
   const latitudeIp = payload.latitude_ip;
   const longitudeIp = payload.longitude_ip;
   console.log('Received message: ', payload);
-  produceRecommendation(userId, flightId, latitudeIp, longitudeIp);
+  produceRecommendation(userId, latitudeIp, longitudeIp, lastFlight);
 
 });
 

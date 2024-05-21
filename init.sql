@@ -41,8 +41,8 @@ BEGIN
   payload := json_build_object(
     'user_id', NEW.user_id,
     'flight_id', NEW.flight_id,
-    'latitud_ip', New.latitudeIp,
-    'longitude_ip', New.longitudeIp,
+    'latitud_ip', NEW.latitudeIp,
+    'longitude_ip', NEW.longitudeIp
   )::text;
 
   PERFORM pg_notify('table_update', payload);

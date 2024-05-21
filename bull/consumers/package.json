@@ -3,6 +3,7 @@
         "@bull-board/api": "^5.17.1",
         "@bull-board/express": "^5.17.1",
         "axios": "^1.7.1",
-        "bullmq": "^5.7.9"
+        "bullmq": "^5.7.9",
+        "dotenv": "^16.4.5"
     }
 }
