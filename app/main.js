@@ -4,9 +4,9 @@ const mqtt = require('mqtt');
 const { v4: uuidv4 } = require('uuid');
 const moment = require('moment-timezone');
 const { auth } = require('express-oauth2-jwt-bearer');
+const cors = require('cors');
 const Database = require('./db');
 const tx = require('./trx');
-const cors = require('cors');
 const { produceRecommendation } = require('./producers');
 require('dotenv').config();
 
@@ -211,7 +211,7 @@ app.get('/purchase', jwtCheck, async (req, res) => {
 app.post('/flights/request', jwtCheck, async (req, res) => {
   console.log('Requesting Purchase');
   try {
-    const body = req.body;
+    const { body } = req;
     const flight = await db.getFlight(body.flight_id);
     const amount = body.quantity * flight.price;
     const purchase = await db.insertPurchase({
@@ -315,8 +315,8 @@ app.post('/flights/commit', async (req, res) => {
       client.publish('flights/validation', JSON.stringify(message));
       res.status(200).json({ message: 'Transacción Completada' });
     } else {
-      res.status(200).json({ message: 'La transacción no fue completada'},);
-    } 
+      res.status(200).json({ message: 'La transacción no fue completada' });
+    }
   } catch (error) {
     console.log('Error during commit purchase: ', error);
     res.status(500).json({
@@ -328,7 +328,7 @@ app.post('/flights/commit', async (req, res) => {
 
 app.post('/flights/validation', async (req, res) => {
   try {
-    const body = req.body;
+    const { body } = req;
     const requestId = body.request_id;
 
     setTimeout(async () => {
