@@ -240,7 +240,7 @@ app.post('/flights/request', jwtCheck, async (req, res) => { // no poder comprar
 
     
     // WebPay Integration
-    const ticket = await tx.create(String(purchase.id), 'test-g9', amount, `http://${process.env.BASE_FRONT_URL}/purchase`);
+    const ticket = await tx.create(String(purchase.id), 'test-g9', amount, `https://${process.env.BASE_FRONT_URL}/purchase`);
 
     const message = {
       request_id: purchase.uuid,
