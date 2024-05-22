@@ -141,6 +141,7 @@ class Database {
     return null; // O manejar según corresponda cuando no hay filas actualizadas
   }
 
+
   async updatePurchaseDir(requestId, latitudeIp, longitudeIp) {
     const updateQuery = `
         UPDATE purchases
@@ -153,6 +154,15 @@ class Database {
       longitudeIp,
       requestId,
     ]);
+  }
+
+  async updateReceiptUrl(uuid, url) {
+    const updateQuery = `
+        UPDATE purchases
+        SET receipt_url = $1
+        WHERE uuid = $2;
+    `;
+    await this.client.query(updateQuery, [url, uuid]);
   }
 
   async close() {
