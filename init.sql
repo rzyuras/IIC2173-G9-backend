@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS flights (
 -- purchase table
 CREATE TABLE IF NOT EXISTS purchases (
       id SERIAL PRIMARY KEY,
+      username VARCHAR(255),
       flight_id INT NOT NULL,
       user_id VARCHAR(255) NOT NULL,
       purchase_status VARCHAR(255) CHECK (purchase_status IN ('pending', 'approved', 'rejected')) NOT NULL,

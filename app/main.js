@@ -226,7 +226,10 @@ app.post('/flights/request', jwtCheck, async (req, res) => { // no poder comprar
       purchase_status: 'pending',
       uuid: uuidv4(),
       quantity: body.quantity,
+      username: body.name
     });
+
+    
     // WebPay Integration
     const ticket = await tx.create(String(purchase.id), 'test-g9', amount, `http://${process.env.BASE_FRONT_URL}/purchase`);
 
@@ -357,7 +360,7 @@ app.post('/flights/validation', async (req, res) => {
         if (validation) {
           const purchaseData = await db.updatePurchaseStatus(requestId, 'approved');
           const pdfData = {
-            userName: purchase.user_id,  
+            userName: purchase.username,  
             flightDetails: {
               flightId: flight.id,
               airline_logo: flight.airline_logo_url,  
@@ -374,23 +377,28 @@ app.post('/flights/validation', async (req, res) => {
             quantity: purchase.quantity,
             totalPrice: flight.price * purchase.quantity
           };
-          const response = await fetch('https://y9bbgbpn0h.execute-api.us-east-2.amazonaws.com/dev/generate-pdf', {
+          try {
+            const response = await fetch('https://y9bbgbpn0h.execute-api.us-east-2.amazonaws.com/dev/generate-pdf', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
             body: JSON.stringify(pdfData),
           });
 
+
           if (response.ok) {
-            const result = await response.json();
+            const result = await response.json(); 
             const receiptUrl = result.url; 
+            console.log("receiptUrl", receiptUrl)
             await db.updateReceiptUrl(requestId, receiptUrl);
             await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
             res.status(200).json({ message: 'Purchase validated, flight updated, and PDF generated', receiptUrl: receiptUrl });
           } else {
             res.status(response.status).json({ message: 'Purchase validated and flight updated, but error generating PDF' });
           }
+
+          } catch (error) {
+            console.log('Error during PDF generation: ', error);
+          }
+          
         } else {
           await db.updatePurchaseStatus(requestId, 'rejected');
           res.status(200).json({ message: 'Purchase rejected due to insufficient tickets' });

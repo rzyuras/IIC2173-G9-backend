@@ -108,9 +108,9 @@ class Database {
   async insertPurchase(data) {
     const insertQuery = `
             INSERT INTO purchases 
-            (flight_id, user_id, purchase_status, quantity, uuid) 
+            (flight_id, user_id, purchase_status, quantity, uuid, username) 
             VALUES 
-            ($1, $2, $3, $4, $5)
+            ($1, $2, $3, $4, $5, $6)
             RETURNING *;
         `;
     const values = [
@@ -119,6 +119,7 @@ class Database {
       data.purchase_status,
       data.quantity,
       data.uuid,
+      data.username,
     ];
     const result = await this.client.query(insertQuery, values);
     return result.rows[0];
