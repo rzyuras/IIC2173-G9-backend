@@ -55,7 +55,7 @@ db.client.on('notification', async (msg) => {
   const latitudeIp = payload.latitude_ip;
   const longitudeIp = payload.longitude_ip;
   // Hacer un post al worker.matiasoliva.me
-  await fetch('http://worker.matiasoliva.me/worker', {
+  const request = await fetch('http://worker.matiasoliva.me/worker', {
     method: 'POST',
     body: JSON.stringify({
       userId,
@@ -216,7 +216,6 @@ app.get('/purchase', jwtCheck, async (req, res) => {
 });
 
 app.post('/flights/request', jwtCheck, async (req, res) => { // no poder comprar si hay menos tickets
-  console.log('flight/request: purchase');
   try {
     const { body } = req;
     const flight = await db.getFlight(body.flight_id);
@@ -308,9 +307,7 @@ app.post(
 );
 
 app.post('/flights/commit', async (req, res) => {
-  console.log('flight/commit: starting')
   try {
-    console.log("body:", req.body)
     const purchaseUuid = req.body.purchase_uuid;
     const wsToken = req.body.ws_token;
     if (wsToken) {
@@ -318,15 +315,12 @@ app.post('/flights/commit', async (req, res) => {
       var commitedStatus = commitedTx.status === 'AUTHORIZED';
       if (commitedStatus) {
         res.status(200).json({ message: 'Pago Aprobado' });
-        console.log('Pago Aprobado')
       } else {
         res.status(200).json({ message: 'Pago Rechazado' });
-        console.log('Pago Rechazada')
       }
     } else {
       var commitedStatus = false;
       res.status(200).json({ message: 'Compra Anulada por el Usuario' });
-      console.log('Pago rechazado por el usuario')
     }
 
     const message = {
@@ -346,12 +340,9 @@ app.post('/flights/commit', async (req, res) => {
 });
 
 app.post('/flights/validation', async (req, res) => {
-  console.log('flight/validation: starting')
   try {
     const { body } = req;
     const requestId = body.request_id;
-
-    console.log("body validation:", body);
 
     setTimeout(async () => {
       let validation = Boolean(body.valid);
