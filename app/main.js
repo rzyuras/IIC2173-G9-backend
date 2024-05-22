@@ -3,7 +3,7 @@ const { validationResult, body } = require('express-validator');
 const mqtt = require('mqtt');
 const { v4: uuidv4 } = require('uuid');
 const moment = require('moment-timezone');
-const { auth } = require('express-oauth2-jwt-bearer');
+const { auth, claimCheck } = require('express-oauth2-jwt-bearer');
 const cors = require('cors');
 const Database = require('./db');
 const tx = require('./trx');
@@ -64,8 +64,16 @@ db.client.on('notification', async (msg) => {
   const lastFlight = await db.getFlight(flightId);
   const latitudeIp = payload.latitude_ip;
   const longitudeIp = payload.longitude_ip;
-  console.log('Received message: ', payload);
-  produceRecommendation(userId, latitudeIp, longitudeIp, lastFlight);
+  // Hacer un post al worker.matiasoliva.me
+  const request = await fetch('http://worker.matiasoliva.me/worker', {
+    method: 'POST',
+    body: JSON.stringify({
+      userId,
+      lastFlight,
+      latitudeIp,
+      longitudeIp,
+    }),
+  });
 });
 
 db.client.query('LISTEN table_update');
@@ -217,8 +225,7 @@ app.get('/purchase', jwtCheck, async (req, res) => {
   }
 });
 
-app.post('/flights/request', jwtCheck, async (req, res) => {
-  console.log('Requesting Purchase');
+app.post('/flights/request', jwtCheck, async (req, res) => { // no poder comprar si hay menos tickets
   try {
     const { body } = req;
     const flight = await db.getFlight(body.flight_id);
@@ -254,6 +261,7 @@ app.post('/flights/request', jwtCheck, async (req, res) => {
       status: 'ok',
       purchase_uuid: purchase.uuid,
       ticket,
+
     });
   } catch (error) {
     console.log('Error during request purchase: ', error);
@@ -379,7 +387,7 @@ app.post('/flights/validation', async (req, res) => {
           await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
           res.status(200).json({ message: 'Purchase validated and flight updated' });
         } else {
-          await db.updatePurchase(requestId, 'rejected');
+          await db.updatePurchaseStatus(requestId, 'rejected');
           res.status(200).json({ message: 'Purchase rejected due to insufficient tickets' });
         }
       }
