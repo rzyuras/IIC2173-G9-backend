@@ -328,7 +328,7 @@ app.post('/flights/commit', jwtCheck, async (req, res) => {
       const commitedTx = await tx.commit(wsToken);
       var commitedStatus = commitedTx.status === 'AUTHORIZED';
       if (commitedStatus) {
-        /* const mailOptions = {
+        const mailOptions = {
           from: 'munoz.hernandez.lorenzo@gmail.com',
           to: userEmail,
           subject: 'Pago exitoso',
@@ -342,7 +342,7 @@ app.post('/flights/commit', jwtCheck, async (req, res) => {
           } else {
             console.log('Email sent: ' + info.response);
           }
-        });*/
+        });
 
         res.status(200).json({ message: 'Pago Aprobado' });
       } else {
