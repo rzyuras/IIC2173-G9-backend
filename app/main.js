@@ -57,23 +57,32 @@ const db = new Database(pgDbname, pgUser, pgPassword, pgHost);
 db.connect();
 
 db.client.on('notification', async (msg) => {
-  const payload = JSON.parse(msg.payload);
-  const userId = payload.user_id;
-  const flightId = payload.flight_id; // arreglar
-  const lastFlight = await db.getFlight(flightId);
-  const latitudeIp = payload.latitude_ip;
-  const longitudeIp = payload.longitude_ip;
-  // Hacer un post al worker.matiasoliva.me
-  const request = await fetch('https://worker.matiasoliva.me/job', {
-    method: 'POST',
-    body: JSON.stringify({
+  try {
+    const payload = JSON.parse(msg.payload);
+    const userId = payload.user_id;
+    const flightId = payload.flight_id; // arreglar
+    const lastFlight = await db.getFlight(flightId);
+    const latitudeIp = payload.latitude_ip;
+    const longitudeIp = payload.longitude_ip;
+    // Hacer un post al worker.matiasoliva.me
+    const message = {
       userId: userId,
       lastFlight: lastFlight,
       latitudeIp: latitudeIp,
       longitudeIp: longitudeIp,
-    }),
-  });
+    };
+    console.log("Notification received: ", JSON.stringify(message));
 
+    const request = await fetch('https://worker.matiasoliva.me/job', {
+      method: 'POST',
+      body: JSON.stringify(message),
+    });
+    const responseData = await request.json();
+    console.log("request:", request.statusText, JSON.stringify(responseData));
+    
+  } catch (error) {
+    console.log('Error during notification: ', error);
+  }
 });
 
 db.client.query('LISTEN table_update');
