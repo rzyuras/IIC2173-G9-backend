@@ -23,6 +23,14 @@ docker rm $(docker ps -aq)
 docker volume rm $(docker volume ls -q)
 docker system prune -a --volumes
 ```
+
+## Redis
+#### Redis ya iniciado
+```bash
+sudo systemctl stop redis
+```
+
+
 ## Docker Bash
 #### Encuentrar el ID del contenedor:
 ```bash
