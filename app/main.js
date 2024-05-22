@@ -320,7 +320,7 @@ app.post(
 );
 
 app.post('/flights/commit', jwtCheck, async (req, res) => {
-  console.log("Request in flight/commit:", req.headers, req.body)
+  console.log("Request in flight/commit:", req.body)
   try {
     const purchaseUuid = req.body.purchase_uuid;
     const wsToken = req.body.ws_token;
@@ -375,7 +375,7 @@ app.post('/flights/validation', async (req, res) => {
   try {
     const { body } = req;
     const requestId = body.request_id;
-    console.log("Request in flight/validation:", req.headers, req.body)
+    console.log("Request in flight/validation:", req.body)
 
     setTimeout(async () => {
       let validation = Boolean(body.valid);
