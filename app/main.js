@@ -7,7 +7,6 @@ const { auth, claimCheck } = require('express-oauth2-jwt-bearer');
 const cors = require('cors');
 const Database = require('./db');
 const tx = require('./trx');
-const { produceRecommendation } = require('./producers');
 require('dotenv').config();
 
 const jwtCheck = auth({
@@ -55,7 +54,7 @@ db.client.on('notification', async (msg) => {
   const lastFlight = await db.getFlight(flightId);
   const latitudeIp = payload.latitude_ip;
   const longitudeIp = payload.longitude_ip;
-  produceRecommendation(userId, latitudeIp, longitudeIp, lastFlight);
+  // Hacer un post al worker.matiasoliva.me
 });
 
 db.client.query('LISTEN table_update');
