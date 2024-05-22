@@ -71,15 +71,17 @@ db.client.on('notification', async (msg) => {
       latitudeIp: latitudeIp,
       longitudeIp: longitudeIp,
     };
-    console.log("Notification received: ", JSON.stringify(message));
 
     const request = await fetch('https://worker.matiasoliva.me/job', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify(message),
     });
     const responseData = await request.json();
     console.log("request:", request.statusText, JSON.stringify(responseData));
-    
+
   } catch (error) {
     console.log('Error during notification: ', error);
   }
