@@ -20,12 +20,9 @@ services:
       MQTT_USER: ${MQTT_USER}
       MQTT_PASSWORD: ${MQTT_PASSWORD}
       AUTH0_ISSUER_BASE_URL: ${AUTH0_ISSUER_BASE_URL}
-      BASE_URL: ${BASE_URL}
+      BASE_FRONT_URL: ${BASE_FRONT_URL}
       AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID}
       SESSION_SECRET: ${SESSION_SECRET}
-      REDIS_PORT: ${REDIS_PORT}
-      REDIS_HOST: ${REDIS_HOST}
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
 
     
   db:
@@ -59,49 +56,6 @@ services:
       DATABASE_USER: ${DATABASE_USER}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD}
       DATABASE_NAME: ${DATABASE_NAME}
-    
-  board:
-    build:
-      context: ./bull/board
-      dockerfile: Dockerfile
-    container_name: board
-    restart: unless-stopped
-    ports:
-      - 3001:3001
-    networks:
-      - app-network
-    depends_on:
-      - redis
-    environment:
-      REDIS_PORT: ${REDIS_PORT}
-      REDIS_HOST: ${REDIS_HOST}
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-
-  consumer:
-    build:
-      context: ./bull/consumers
-      dockerfile: Dockerfile
-    container_name: consumer
-    restart: unless-stopped
-    networks:
-      - app-network
-    depends_on:
-      - redis
-    environment:
-      REDIS_PORT: ${REDIS_PORT}
-      REDIS_HOST: ${REDIS_HOST}
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-  
-  redis:
-    image: redis
-    container_name: redis
-    command: redis-server --requirepass ${REDIS_PASSWORD}
-    ports:
-      - 6379:6379
-    networks:
-      - app-network
-    
-
 
 networks:
   app-network:

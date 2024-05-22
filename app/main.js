@@ -1,12 +1,22 @@
 const express = require('express');
+const { validationResult, body } = require('express-validator');
 const mqtt = require('mqtt');
 const { v4: uuidv4 } = require('uuid');
 const moment = require('moment-timezone');
-const { auth } = require('express-oauth2-jwt-bearer');
+const { auth, claimCheck } = require('express-oauth2-jwt-bearer');
 const cors = require('cors');
 const Database = require('./db');
 const tx = require('./trx');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'munoz.hernandez.lorenzo@gmail.com',
+    pass: 'veof xwcs jzcy kjyh'
+  }
+});
 
 const jwtCheck = auth({
   audience: 'https://dev-1op7rfthd5gfwdq8.us.auth0.com/api/v2/',
@@ -45,6 +55,27 @@ const mqttPassword = process.env.MQTT_PASSWORD;
 // Crear instancia de Database
 const db = new Database(pgDbname, pgUser, pgPassword, pgHost);
 db.connect();
+
+db.client.on('notification', async (msg) => {
+  const payload = JSON.parse(msg.payload);
+  const userId = payload.user_id;
+  const flightId = payload.flight_id; // arreglar
+  const lastFlight = await db.getFlight(flightId);
+  const latitudeIp = payload.latitude_ip;
+  const longitudeIp = payload.longitude_ip;
+  // Hacer un post al worker.matiasoliva.me
+  const request = await fetch('http://worker.matiasoliva.me/worker', {
+    method: 'POST',
+    body: JSON.stringify({
+      userId,
+      lastFlight,
+      latitudeIp,
+      longitudeIp,
+    }),
+  });
+});
+
+db.client.query('LISTEN table_update');
 
 // Conectarse al Broker
 const client = mqtt.connect(`mqtt://${mqttBroker}:${mqttPort}`, {
@@ -140,7 +171,7 @@ app.get('/flights', async (req, res) => {
 
     res.json({ flights: selectedFlights });
   } catch (error) {
-    console.log('Error during get flights: ', error)
+    console.log('Error during get flights: ', error);
     res
       .status(500)
       .json({ message: 'Error retrieving flights', error: error.message });
@@ -193,8 +224,7 @@ app.get('/purchase', jwtCheck, async (req, res) => {
   }
 });
 
-app.post('/flights/request', jwtCheck, async (req, res) => {
-  console.log('Requesting Purchase')
+app.post('/flights/request', jwtCheck, async (req, res) => { // no poder comprar si hay menos tickets
   try {
     const { body } = req;
     const flight = await db.getFlight(body.flight_id);
@@ -205,15 +235,18 @@ app.post('/flights/request', jwtCheck, async (req, res) => {
       purchase_status: 'pending',
       uuid: uuidv4(),
       quantity: body.quantity,
+      username: body.name
     });
+
+    
     // WebPay Integration
-    const ticket = await tx.create(String(purchase.id), 'test-g9', amount, 'http://matiasoliva.me/purchase');
+    const ticket = await tx.create(String(purchase.id), 'test-g9', amount, `http://${process.env.BASE_FRONT_URL}/purchase`);
 
     const message = {
       request_id: purchase.uuid,
       group_id: '9',
-      departure_airport: flight.departure_airport_name,
-      arrival_airport: flight.arrival_airport_name,
+      departure_airport: flight.departure_airport_id,
+      arrival_airport: flight.arrival_airport_id,
       departure_time: moment(flight.departure_airport_time)
         .tz('America/Santiago')
         .format('YYYY-MM-DD HH:mm'),
@@ -223,14 +256,17 @@ app.post('/flights/request', jwtCheck, async (req, res) => {
       seller: 0,
     };
 
+    db.updatePurchaseDir(purchase.uuid, body.latitudeIp, body.longitudeIp);
     client.publish('flights/requests', JSON.stringify(message));
 
     res.status(201).json({
       status: 'ok',
+      purchase_uuid: purchase.uuid,
       ticket,
+
     });
   } catch (error) {
-    console.log('Error during request purchase: ', error)
+    console.log('Error during request purchase: ', error);
     res.status(500).json({
       message: 'An error occurred processing the request purchase in flight/request',
       error: error.message,
@@ -238,53 +274,92 @@ app.post('/flights/request', jwtCheck, async (req, res) => {
   }
 });
 
-app.post('/flights/request/other', jwtCheck, async (req) => {
-  console.log('Requesting Purchase by other groups')
-  try {
-    const { body } = req;
+app.post(
+  '/flights/request/other',
+  jwtCheck,
+  body('request_id').notEmpty().isAscii(),
+  body('group_id').notEmpty().isInt(),
+  body('departure_airport').notEmpty().isAscii(),
+  body('arrival_airport').notEmpty().isAscii(),
+  body('departure_time').notEmpty().matches(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/),
+  body('datetime').notEmpty().isAscii(),
+  body('deposit_token').notEmpty(),
+  body('quantity').notEmpty().isInt(),
+  body('seller').notEmpty(),
+  async (req) => {
+    try {
+      const { body } = req;
+      const result = validationResult(req);
 
-    let horaChile = moment.tz(body.departure_time, 'YYYY-MM-DD HH:mm', 'America/Santiago');
-    horaChile = horaChile.utc().format();
+      if (result.isEmpty() && body.group_id !== '9') {
+        let horaChile = moment.tz(body.departure_time, 'YYYY-MM-DD HH:mm', 'America/Santiago');
+        horaChile = horaChile.utc().format();
 
-    const flight = await db.getFlightBydata(
-      body.departure_airport,
-      body.arrival_airport,
-      horaChile,
-    );
+        const flight = await db.getFlightBydata(
+          body.departure_airport,
+          body.arrival_airport,
+          horaChile,
+        );
 
-    if (flight) {
-      await db.insertPurchase({
-        flight_id: flight.id,
-        user_id: 'null',
-        purchase_status: 'pending',
-        uuid: body.request_id,
-        quantity: body.quantity,
-      });
+        if (flight) {
+          await db.insertPurchase({
+            flight_id: flight.id,
+            user_id: 'null',
+            purchase_status: 'pending',
+            uuid: body.request_id,
+            quantity: body.quantity,
+          });
+        }
+      } else {
+        console.log(`Invalid data request from group ${body.group_id}`);
+      }
+    } catch (error) {
+      console.log('Error during request purchase by other groups: ', error);
     }
-  } catch (error) {
-    console.log('Error during request purchase by other groups: ', error);
-  }
-});
+  },
+);
 
 app.post('/flights/commit', async (req, res) => {
   try {
-    const { wsToken } = req.body;
+    const purchaseUuid = req.body.purchase_uuid;
+    const wsToken = req.body.ws_token;
+    const userEmail = req.body.userEmail;
     if (wsToken) {
       const commitedTx = await tx.commit(wsToken);
-      console.log('Commited ticket ', commitedTx);
-      const purchase = await db.getPurchaseById(commitedTx.buy_order);
+      var commitedStatus = commitedTx.status === 'AUTHORIZED';
+      if (commitedStatus) {
+        const mailOptions = {
+          from: 'munoz.hernandez.lorenzo@gmail.com',
+          to: userEmail,
+          subject: 'Pago exitoso',
+          text: '¡Tu pago ha sido recibido exitosamente!\n\nGracias por comprar en FlightsApp.\nVolar nunca fue tan fácil😉',
+          html: '<strong>¡Tu pago ha sido recibido exitosamente!</strong><br><br>Gracias por comprar en FlightsApp.<br>Volar nunca fue tan fácil😉',
+        };
+        
+        transporter.sendMail(mailOptions, function(error, info){
+          if (error) {
+            console.log(error);
+          } else {
+            console.log('Email sent: ' + info.response);
+          }
+        });
 
-      const message = {
-        request_id: purchase.uuid,
-        group_id: '9',
-        seller: '0',
-        valid: commitedTx.status === 'AUTHORIZED',
-      };
-      client.publish('flights/validation', JSON.stringify(message));
-      res.status(200).json({ message: 'Transacción Completada' });
+        res.status(200).json({ message: 'Pago Aprobado' });
+      } else {
+        res.status(200).json({ message: 'Pago Rechazado' });
+      }
     } else {
-      res.status(200).json({ message: 'Transacción Anulada por el usuario' });
+      var commitedStatus = false;
+      res.status(200).json({ message: 'Compra Anulada por el Usuario' });
     }
+
+    const message = {
+      request_id: purchaseUuid,
+      group_id: '9',
+      seller: '0',
+      valid: commitedStatus,
+    };
+    client.publish('flights/validation', JSON.stringify(message));
   } catch (error) {
     console.log('Error during commit purchase: ', error);
     res.status(500).json({
@@ -297,7 +372,7 @@ app.post('/flights/commit', async (req, res) => {
 app.post('/flights/validation', async (req, res) => {
   try {
     const { body } = req;
-    const { requestId } = body;
+    const requestId = body.request_id;
 
     setTimeout(async () => {
       let validation = Boolean(body.valid);
@@ -310,15 +385,53 @@ app.post('/flights/validation', async (req, res) => {
           validation = false;
         }
         if (validation) {
-          const purchaseData = await db.updatePurchase(requestId, 'approved');
-          await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
-          res.status(200).json({ message: 'Purchase validated and flight updated' });
+          const purchaseData = await db.updatePurchaseStatus(requestId, 'approved');
+          const pdfData = {
+            userName: purchase.username,  
+            flightDetails: {
+              flightId: flight.id,
+              airline_logo: flight.airline_logo_url,  
+              airline: flight.airline,
+              departure_airport_time: flight.departure_airport_time,
+              departure_airport_id: flight.departure_airport_id,
+              departure_airport_name: flight.departure_airport_name,
+              arrival_airport_time: flight.arrival_airport_time,
+              arrival_airport_id: flight.arrival_airport_id,
+              arrival_airport_name: flight.arrival_airport_name,
+              price: flight.price
+            },
+            receiptId: purchase.uuid,
+            quantity: purchase.quantity,
+            totalPrice: flight.price * purchase.quantity
+          };
+          try {
+            const response = await fetch('https://y9bbgbpn0h.execute-api.us-east-2.amazonaws.com/dev/generate-pdf', {
+            method: 'POST',
+            body: JSON.stringify(pdfData),
+          });
+
+
+          if (response.ok) {
+            const result = await response.json(); 
+            const receiptUrl = result.url; 
+            console.log("receiptUrl", receiptUrl)
+            await db.updateReceiptUrl(requestId, receiptUrl);
+            await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
+            res.status(200).json({ message: 'Purchase validated, flight updated, and PDF generated', receiptUrl: receiptUrl });
+          } else {
+            res.status(response.status).json({ message: 'Purchase validated and flight updated, but error generating PDF' });
+          }
+
+          } catch (error) {
+            console.log('Error during PDF generation: ', error);
+          }
+          
         } else {
-          await db.updatePurchase(requestId, 'rejected');
+          await db.updatePurchaseStatus(requestId, 'rejected');
           res.status(200).json({ message: 'Purchase rejected due to insufficient tickets' });
         }
       }
-    }, 10000);
+    }, 1000);
   } catch (error) {
     console.log('Error during validation: ', error);
     res.status(500).json({
@@ -329,4 +442,6 @@ app.post('/flights/validation', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT);
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
