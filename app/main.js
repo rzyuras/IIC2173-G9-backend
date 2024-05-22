@@ -63,7 +63,6 @@ db.client.on('notification', async (msg) => {
   const lastFlight = await db.getFlight(flightId);
   const latitudeIp = payload.latitude_ip;
   const longitudeIp = payload.longitude_ip;
-  console.log(userId, flightId, lastFlight, latitudeIp, longitudeIp)
   // Hacer un post al worker.matiasoliva.me
   const request = await fetch('https://worker.matiasoliva.me/job', {
     method: 'POST',
@@ -74,7 +73,7 @@ db.client.on('notification', async (msg) => {
       longitudeIp,
     }),
   });
-  console.log("request:", request.statusText)
+  console.log("request:", request.statusText, await request.json());
 });
 
 db.client.query('LISTEN table_update');
@@ -342,7 +341,7 @@ app.post('/flights/commit', jwtCheck, async (req, res) => {
           if (error) {
             console.log(error);
           } else {
-            console.log('Email sent: ' + info.response);
+            //
           }
         });
 
@@ -416,7 +415,6 @@ app.post('/flights/validation', async (req, res) => {
           if (response.ok) {
             const result = await response.json(); 
             const receiptUrl = result.url; 
-            console.log("receiptUrl", receiptUrl)
             await db.updateReceiptUrl(requestId, receiptUrl);
             await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
             res.status(200).json({ message: 'Purchase validated, flight updated, and PDF generated', receiptUrl: receiptUrl });
