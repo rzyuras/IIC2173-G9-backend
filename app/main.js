@@ -3,11 +3,10 @@ const { validationResult, body } = require('express-validator');
 const mqtt = require('mqtt');
 const { v4: uuidv4 } = require('uuid');
 const moment = require('moment-timezone');
-const { auth } = require('express-oauth2-jwt-bearer');
+const { auth, claimCheck } = require('express-oauth2-jwt-bearer');
 const cors = require('cors');
 const Database = require('./db');
 const tx = require('./trx');
-const { produceRecommendation } = require('./producers');
 require('dotenv').config();
 
 const jwtCheck = auth({
@@ -55,8 +54,16 @@ db.client.on('notification', async (msg) => {
   const lastFlight = await db.getFlight(flightId);
   const latitudeIp = payload.latitude_ip;
   const longitudeIp = payload.longitude_ip;
-  console.log('Received message: ', payload);
-  produceRecommendation(userId, latitudeIp, longitudeIp, lastFlight);
+  // Hacer un post al worker.matiasoliva.me
+  const request = await fetch('http://worker.matiasoliva.me/worker', {
+    method: 'POST',
+    body: JSON.stringify({
+      userId,
+      lastFlight,
+      latitudeIp,
+      longitudeIp,
+    }),
+  });
 });
 
 db.client.query('LISTEN table_update');
@@ -208,8 +215,7 @@ app.get('/purchase', jwtCheck, async (req, res) => {
   }
 });
 
-app.post('/flights/request', jwtCheck, async (req, res) => {
-  console.log('Requesting Purchase');
+app.post('/flights/request', jwtCheck, async (req, res) => { // no poder comprar si hay menos tickets
   try {
     const { body } = req;
     const flight = await db.getFlight(body.flight_id);
@@ -243,7 +249,8 @@ app.post('/flights/request', jwtCheck, async (req, res) => {
 
     res.status(201).json({
       status: 'ok',
-      ticket,
+      ticket: ticket,
+      purchase_uuid: purchase.uuid,
     });
   } catch (error) {
     console.log('Error during request purchase: ', error);
@@ -301,22 +308,28 @@ app.post(
 
 app.post('/flights/commit', async (req, res) => {
   try {
+    const purchaseUuid = req.body.purchase_uuid;
     const wsToken = req.body.ws_token;
     if (wsToken) {
       const commitedTx = await tx.commit(wsToken);
-      const purchase = await db.getPurchaseById(commitedTx.buy_order);
-
-      const message = {
-        request_id: purchase.uuid,
-        group_id: '9',
-        seller: '0',
-        valid: commitedTx.status === 'AUTHORIZED',
-      };
-      client.publish('flights/validation', JSON.stringify(message));
-      res.status(200).json({ message: 'Transacción Completada' });
+      var commitedStatus = commitedTx.status === 'AUTHORIZED';
+      if (commitedStatus) {
+        res.status(200).json({ message: 'Pago Aprobado' });
+      } else {
+        res.status(200).json({ message: 'Pago Rechazado' });
+      }
     } else {
-      res.status(200).json({ message: 'La transacción no fue completada' });
+      var commitedStatus = false;
+      res.status(200).json({ message: 'Compra Anulada por el Usuario' });
     }
+
+    const message = {
+      request_id: purchaseUuid,
+      group_id: '9',
+      seller: '0',
+      valid: commitedStatus,
+    };
+    client.publish('flights/validation', JSON.stringify(message));
   } catch (error) {
     console.log('Error during commit purchase: ', error);
     res.status(500).json({
@@ -346,7 +359,7 @@ app.post('/flights/validation', async (req, res) => {
           await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
           res.status(200).json({ message: 'Purchase validated and flight updated' });
         } else {
-          await db.updatePurchase(requestId, 'rejected');
+          await db.updatePurchaseStatus(requestId, 'rejected');
           res.status(200).json({ message: 'Purchase rejected due to insufficient tickets' });
         }
       }
