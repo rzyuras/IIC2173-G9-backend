@@ -108,9 +108,9 @@ class Database {
   async insertPurchase(data) {
     const insertQuery = `
             INSERT INTO purchases 
-            (flight_id, user_id, purchase_status, quantity, uuid) 
+            (flight_id, user_id, purchase_status, quantity, uuid, username) 
             VALUES 
-            ($1, $2, $3, $4, $5)
+            ($1, $2, $3, $4, $5, $6)
             RETURNING *;
         `;
     const values = [
@@ -119,6 +119,7 @@ class Database {
       data.purchase_status,
       data.quantity,
       data.uuid,
+      data.username,
     ];
     const result = await this.client.query(insertQuery, values);
     return result.rows[0];
@@ -141,6 +142,7 @@ class Database {
     return null; // O manejar según corresponda cuando no hay filas actualizadas
   }
 
+
   async updatePurchaseDir(requestId, latitudeIp, longitudeIp) {
     const updateQuery = `
         UPDATE purchases
@@ -153,6 +155,15 @@ class Database {
       longitudeIp,
       requestId,
     ]);
+  }
+
+  async updateReceiptUrl(uuid, url) {
+    const updateQuery = `
+        UPDATE purchases
+        SET receipt_url = $1
+        WHERE uuid = $2;
+    `;
+    await this.client.query(updateQuery, [url, uuid]);
   }
 
   async close() {

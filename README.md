@@ -40,12 +40,12 @@ docker ps:
 
 #### Accede al contenedor:
 ```bash
-docker exec -it <container_id> bash
+docker exec -it  bash
 ```
 
 #### Accede a la base de datos PostgreSQL:
 ```bash
-psql -U postgres -d mydatabase
+psql -U postgres -d flightsdb
 ```
 ## EsLint
 #### Revisar errores con ESLint

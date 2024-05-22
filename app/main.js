@@ -235,7 +235,10 @@ app.post('/flights/request', jwtCheck, async (req, res) => { // no poder comprar
       purchase_status: 'pending',
       uuid: uuidv4(),
       quantity: body.quantity,
+      username: body.name
     });
+
+    
     // WebPay Integration
     const ticket = await tx.create(String(purchase.id), 'test-g9', amount, `http://${process.env.BASE_FRONT_URL}/purchase`);
 
@@ -383,8 +386,46 @@ app.post('/flights/validation', async (req, res) => {
         }
         if (validation) {
           const purchaseData = await db.updatePurchaseStatus(requestId, 'approved');
-          await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
-          res.status(200).json({ message: 'Purchase validated and flight updated' });
+          const pdfData = {
+            userName: purchase.username,  
+            flightDetails: {
+              flightId: flight.id,
+              airline_logo: flight.airline_logo_url,  
+              airline: flight.airline,
+              departure_airport_time: flight.departure_airport_time,
+              departure_airport_id: flight.departure_airport_id,
+              departure_airport_name: flight.departure_airport_name,
+              arrival_airport_time: flight.arrival_airport_time,
+              arrival_airport_id: flight.arrival_airport_id,
+              arrival_airport_name: flight.arrival_airport_name,
+              price: flight.price
+            },
+            receiptId: purchase.uuid,
+            quantity: purchase.quantity,
+            totalPrice: flight.price * purchase.quantity
+          };
+          try {
+            const response = await fetch('https://y9bbgbpn0h.execute-api.us-east-2.amazonaws.com/dev/generate-pdf', {
+            method: 'POST',
+            body: JSON.stringify(pdfData),
+          });
+
+
+          if (response.ok) {
+            const result = await response.json(); 
+            const receiptUrl = result.url; 
+            console.log("receiptUrl", receiptUrl)
+            await db.updateReceiptUrl(requestId, receiptUrl);
+            await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
+            res.status(200).json({ message: 'Purchase validated, flight updated, and PDF generated', receiptUrl: receiptUrl });
+          } else {
+            res.status(response.status).json({ message: 'Purchase validated and flight updated, but error generating PDF' });
+          }
+
+          } catch (error) {
+            console.log('Error during PDF generation: ', error);
+          }
+          
         } else {
           await db.updatePurchaseStatus(requestId, 'rejected');
           res.status(200).json({ message: 'Purchase rejected due to insufficient tickets' });
@@ -401,4 +442,6 @@ app.post('/flights/validation', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT);
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
