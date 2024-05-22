@@ -57,12 +57,8 @@ db.client.on('notification', async (msg) => {
   // Hacer un post al worker.matiasoliva.me
   await fetch('http://worker.matiasoliva.me/worker', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
     body: JSON.stringify({
       userId,
-      flightId,
       lastFlight,
       latitudeIp,
       longitudeIp,
