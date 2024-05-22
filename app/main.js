@@ -74,7 +74,7 @@ db.client.on('notification', async (msg) => {
     }),
   });
   const responseData = await request.json();
-  console.log("request:", response.statusText, JSON.stringify(responseData, null, 2));
+  console.log("request:", request.statusText, JSON.stringify(responseData, null, 2));
 
 });
 
