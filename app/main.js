@@ -320,7 +320,6 @@ app.post(
 );
 
 app.post('/flights/commit', jwtCheck, async (req, res) => {
-  console.log("Request in flight/commit:", req.body)
   try {
     const purchaseUuid = req.body.purchase_uuid;
     const wsToken = req.body.ws_token;
@@ -360,7 +359,6 @@ app.post('/flights/commit', jwtCheck, async (req, res) => {
       seller: '0',
       valid: commitedStatus,
     };
-    console.log("Message in flight/commit:", message)
     client.publish('flights/validation', JSON.stringify(message));
   } catch (error) {
     console.log('Error during commit purchase: ', error);
@@ -375,7 +373,6 @@ app.post('/flights/validation', async (req, res) => {
   try {
     const { body } = req;
     const requestId = body.request_id;
-    console.log("Request in flight/validation:", req.body)
 
     setTimeout(async () => {
       let validation = Boolean(body.valid);
