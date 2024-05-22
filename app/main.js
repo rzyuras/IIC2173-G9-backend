@@ -7,7 +7,17 @@ const { auth, claimCheck } = require('express-oauth2-jwt-bearer');
 const cors = require('cors');
 const Database = require('./db');
 const tx = require('./trx');
+const { produceRecommendation } = require('./producers');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'munoz.hernandez.lorenzo@gmail.com',
+    pass: 'veof xwcs jzcy kjyh'
+  }
+});
 
 const jwtCheck = auth({
   audience: 'https://dev-1op7rfthd5gfwdq8.us.auth0.com/api/v2/',
@@ -249,8 +259,9 @@ app.post('/flights/request', jwtCheck, async (req, res) => { // no poder comprar
 
     res.status(201).json({
       status: 'ok',
-      ticket: ticket,
       purchase_uuid: purchase.uuid,
+      ticket,
+
     });
   } catch (error) {
     console.log('Error during request purchase: ', error);
@@ -310,10 +321,27 @@ app.post('/flights/commit', async (req, res) => {
   try {
     const purchaseUuid = req.body.purchase_uuid;
     const wsToken = req.body.ws_token;
+    const userEmail = req.body.userEmail;
     if (wsToken) {
       const commitedTx = await tx.commit(wsToken);
       var commitedStatus = commitedTx.status === 'AUTHORIZED';
       if (commitedStatus) {
+        const mailOptions = {
+          from: 'munoz.hernandez.lorenzo@gmail.com',
+          to: userEmail,
+          subject: 'Pago exitoso',
+          text: '¡Tu pago ha sido exitosamente enviado!',
+          html: '<strong>¡Tu pago ha sido exitosamente enviado!</strong>',
+        };
+        
+        transporter.sendMail(mailOptions, function(error, info){
+          if (error) {
+            console.log(error);
+          } else {
+            console.log('Email sent: ' + info.response);
+          }
+        });
+
         res.status(200).json({ message: 'Pago Aprobado' });
       } else {
         res.status(200).json({ message: 'Pago Rechazado' });
