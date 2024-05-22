@@ -67,14 +67,12 @@ db.client.on('notification', async (msg) => {
   const request = await fetch('https://worker.matiasoliva.me/job', {
     method: 'POST',
     body: JSON.stringify({
-      userId,
-      lastFlight,
-      latitudeIp,
-      longitudeIp,
+      userId: userId,
+      lastFlight: lastFlight,
+      latitudeIp: latitudeIp,
+      longitudeIp: longitudeIp,
     }),
   });
-  const responseData = await request.json();
-  console.log("request:", request.statusText, JSON.stringify(responseData, null, 2));
 
 });
 
