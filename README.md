@@ -40,7 +40,7 @@ docker ps:
 
 #### Accede al contenedor:
 ```bash
-docker exec -it  bash
+docker exec -it <contenedor_id> bash
 ```
 
 #### Accede a la base de datos PostgreSQL:
@@ -56,6 +56,18 @@ npm run lint
 #### Corregir errores automaticamente
 ```bash
 npm run lint -- --fix
+```
+
+## Acceder a la Instancia AWS:
+
+- Servidor: 
+```bash
+ssh -i "ClaveArqui.pem" ubuntu@ec2-3-142-180-79.us-east-2.compute.amazonaws.com
+```
+
+- Worker:
+```bash
+ssh -i "ClaveArqui.pem" ubuntu@ec2-18-218-127-112.us-east-2.compute.amazonaws.com
 ```
 
 
