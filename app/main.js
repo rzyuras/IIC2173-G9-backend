@@ -63,6 +63,7 @@ db.client.on('notification', async (msg) => {
   const lastFlight = await db.getFlight(flightId);
   const latitudeIp = payload.latitude_ip;
   const longitudeIp = payload.longitude_ip;
+  console.log(userId, flightId, lastFlight, latitudeIp, longitudeIp)
   // Hacer un post al worker.matiasoliva.me
   const request = await fetch('https://worker.matiasoliva.me/job', {
     method: 'POST',
@@ -73,6 +74,7 @@ db.client.on('notification', async (msg) => {
       longitudeIp,
     }),
   });
+  console.log("request:", request)
 });
 
 db.client.query('LISTEN table_update');
