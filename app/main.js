@@ -73,7 +73,9 @@ db.client.on('notification', async (msg) => {
       longitudeIp,
     }),
   });
-  console.log("request:", request.statusText, await request.json());
+  const responseData = await response.json();
+  console.log("request:", response.statusText, JSON.stringify(responseData, null, 2));
+
 });
 
 db.client.query('LISTEN table_update');
