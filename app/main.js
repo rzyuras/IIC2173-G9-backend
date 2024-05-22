@@ -64,7 +64,7 @@ db.client.on('notification', async (msg) => {
   const latitudeIp = payload.latitude_ip;
   const longitudeIp = payload.longitude_ip;
   // Hacer un post al worker.matiasoliva.me
-  const request = await fetch('http://worker.matiasoliva.me/worker', {
+  const request = await fetch('https://worker.matiasoliva.me/job', {
     method: 'POST',
     body: JSON.stringify({
       userId,
@@ -240,7 +240,7 @@ app.post('/flights/request', jwtCheck, async (req, res) => { // no poder comprar
 
     
     // WebPay Integration
-    const ticket = await tx.create(String(purchase.id), 'test-g9', amount, `https://${process.env.BASE_FRONT_URL}/purchase`);
+    const ticket = await tx.create(String(purchase.id), 'test-g9', amount, `${process.env.BASE_FRONT_URL}/purchase`);
 
     const message = {
       request_id: purchase.uuid,
@@ -328,7 +328,7 @@ app.post('/flights/commit', async (req, res) => {
       const commitedTx = await tx.commit(wsToken);
       var commitedStatus = commitedTx.status === 'AUTHORIZED';
       if (commitedStatus) {
-        const mailOptions = {
+        /* const mailOptions = {
           from: 'munoz.hernandez.lorenzo@gmail.com',
           to: userEmail,
           subject: 'Pago exitoso',
@@ -342,7 +342,7 @@ app.post('/flights/commit', async (req, res) => {
           } else {
             console.log('Email sent: ' + info.response);
           }
-        });
+        });*/
 
         res.status(200).json({ message: 'Pago Aprobado' });
       } else {
