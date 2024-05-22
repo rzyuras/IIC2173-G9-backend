@@ -329,8 +329,8 @@ app.post('/flights/commit', async (req, res) => {
           from: 'munoz.hernandez.lorenzo@gmail.com',
           to: userEmail,
           subject: 'Pago exitoso',
-          text: '¡Tu pago ha sido exitosamente enviado!',
-          html: '<strong>¡Tu pago ha sido exitosamente enviado!</strong>',
+          text: '¡Tu pago ha sido recibido exitosamente!\n\nGracias por comprar en FlightsApp.\nVolar nunca fue tan fácil😉',
+          html: '<strong>¡Tu pago ha sido recibido exitosamente!</strong><br><br>Gracias por comprar en FlightsApp.<br>Volar nunca fue tan fácil😉',
         };
         
         transporter.sendMail(mailOptions, function(error, info){
