@@ -320,7 +320,6 @@ app.post(
 );
 
 app.post('/flights/commit', jwtCheck, async (req, res) => {
-  console.log("Request in flight/commit:", req.body)
   try {
     const purchaseUuid = req.body.purchase_uuid;
     const wsToken = req.body.ws_token;
