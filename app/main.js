@@ -7,7 +7,6 @@ const { auth, claimCheck } = require('express-oauth2-jwt-bearer');
 const cors = require('cors');
 const Database = require('./db');
 const tx = require('./trx');
-const { produceRecommendation } = require('./producers');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
