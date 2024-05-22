@@ -8,7 +8,16 @@ const cors = require('cors');
 const Database = require('./db');
 const tx = require('./trx');
 const { produceRecommendation } = require('./producers');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'munoz.hernandez.lorenzo@gmail.com',
+    pass: 'veof xwcs jzcy kjyh'
+  }
+});
 
 const jwtCheck = auth({
   audience: 'https://dev-1op7rfthd5gfwdq8.us.auth0.com/api/v2/',
@@ -243,6 +252,7 @@ app.post('/flights/request', jwtCheck, async (req, res) => {
 
     res.status(201).json({
       status: 'ok',
+      purchase_uuid: purchase.uuid,
       ticket,
     });
   } catch (error) {
@@ -301,22 +311,45 @@ app.post(
 
 app.post('/flights/commit', async (req, res) => {
   try {
+    const purchaseUuid = req.body.purchase_uuid;
     const wsToken = req.body.ws_token;
+    const userEmail = req.body.userEmail;
     if (wsToken) {
       const commitedTx = await tx.commit(wsToken);
-      const purchase = await db.getPurchaseById(commitedTx.buy_order);
+      var commitedStatus = commitedTx.status === 'AUTHORIZED';
+      if (commitedStatus) {
+        const mailOptions = {
+          from: 'munoz.hernandez.lorenzo@gmail.com',
+          to: userEmail,
+          subject: 'Pago exitoso',
+          text: '¡Tu pago ha sido exitosamente enviado!',
+          html: '<strong>¡Tu pago ha sido exitosamente enviado!</strong>',
+        };
+        
+        transporter.sendMail(mailOptions, function(error, info){
+          if (error) {
+            console.log(error);
+          } else {
+            console.log('Email sent: ' + info.response);
+          }
+        });
 
-      const message = {
-        request_id: purchase.uuid,
-        group_id: '9',
-        seller: '0',
-        valid: commitedTx.status === 'AUTHORIZED',
-      };
-      client.publish('flights/validation', JSON.stringify(message));
-      res.status(200).json({ message: 'Transacción Completada' });
+        res.status(200).json({ message: 'Pago Aprobado' });
+      } else {
+        res.status(200).json({ message: 'Pago Rechazado' });
+      }
     } else {
-      res.status(200).json({ message: 'La transacción no fue completada' });
+      var commitedStatus = false;
+      res.status(200).json({ message: 'Compra Anulada por el Usuario' });
     }
+
+    const message = {
+      request_id: purchaseUuid,
+      group_id: '9',
+      seller: '0',
+      valid: commitedStatus,
+    };
+    client.publish('flights/validation', JSON.stringify(message));
   } catch (error) {
     console.log('Error during commit purchase: ', error);
     res.status(500).json({
