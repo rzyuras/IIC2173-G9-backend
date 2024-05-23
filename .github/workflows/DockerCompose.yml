@@ -65,6 +65,7 @@ jobs:
         ECR_REPOSITORY: public.ecr.aws/a6z9o0z4/codedeploy
       run: |
         IMAGE_TAG=${GITHUB_SHA}
+        docker images
         docker tag app:latest $ECR_REPOSITORY/app:$IMAGE_TAG
         docker tag broker:latest $ECR_REPOSITORY/broker:$IMAGE_TAG
         docker tag postgres:15 $ECR_REPOSITORY/db:$IMAGE_TAG
