@@ -79,6 +79,7 @@ db.client.on('notification', async (msg) => {
       },
       body: JSON.stringify(message),
     });
+    console.log('Notification received: ', request);
 
   } catch (error) {
     console.log('Error during notification: ', error);
