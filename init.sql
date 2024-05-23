@@ -26,8 +26,8 @@ CREATE TABLE IF NOT EXISTS purchases (
       user_id VARCHAR(255) NOT NULL,
       purchase_status VARCHAR(255) CHECK (purchase_status IN ('pending', 'approved', 'rejected')) NOT NULL,
       quantity INT NOT NULL,
-      latitudeIp NUMERIC,
-      longitudeIp NUMERIC,
+      latitude_ip NUMERIC,
+      longitude_ip NUMERIC,
       uuid VARCHAR(255) NOT NULL,
       receipt_url VARCHAR(255),
       FOREIGN KEY (flight_id) REFERENCES flights(id)
@@ -56,8 +56,8 @@ BEGIN
   payload := json_build_object(
     'user_id', NEW.user_id,
     'flight_id', NEW.flight_id,
-    'latitude_ip', NEW.latitudeIp,
-    'longitude_ip', NEW.longitudeIp
+    'latitude_ip', NEW.latitude_ip,
+    'longitude_ip', NEW.longitude_ip
   )::text;
 
   PERFORM pg_notify('table_update', payload);
