@@ -72,7 +72,7 @@ db.client.on('notification', async (msg) => {
       longitudeIp: longitudeIp,
     };
 
-    const request = await fetch('https://worker.matiasoliva.me/job', {
+    const request = await fetch('https://8ilp4td039.execute-api.us-east-2.amazonaws.com/dev/job', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
