@@ -169,7 +169,7 @@ class Database {
   async createRecommendation(userId) {
     const insertQuery = `
             INSERT INTO recommendations 
-            (user_id, createdAt, updatedAt) 
+            (user_id, "createdAt", "updatedAt") 
             VALUES 
             ($1, $2, $2)
             ON CONFLICT (user_id) DO NOTHING
@@ -181,7 +181,7 @@ class Database {
   async updateRecommendation(user_id, flight1, flight2, flight3) {
     const updateQuery = `
             UPDATE recommendations
-            SET flight1 = $2, flight2 = $3, flight3 = $4, updatedAt = $5
+            SET flight1 = $2, flight2 = $3, flight3 = $4, "updatedAt" = $5
             WHERE user_id = $1
         `;
     const values = [user_id, flight1, flight2, flight3, new Date()];
