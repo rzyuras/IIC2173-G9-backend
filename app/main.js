@@ -80,7 +80,14 @@ db.client.on('notification', async (msg) => {
       body: JSON.stringify(message),
     });
     const result = await request.json();
-    console.log('Notification received: ', result);
+    if (result.length === 3) {
+      const flight1 = result[0];
+      const flight2 = result[1];
+      const flight3 = result[2];
+      await db.createRecommendation(userId);
+      console.log('Notification received: ', result[0], result[1], result[2]);
+      //await db.updateRecommendation(userId, flight1.id, flight2.id, flight3.id);
+    }
 
   } catch (error) {
     console.log('Error during notification: ', error);
@@ -220,6 +227,18 @@ app.post('/flights', async (req, res) => {
       message: 'An error occurred inserting the flight',
       error: error.message,
     });
+  }
+});
+
+app.get('/flights/recommendations', jwtCheck, async (req, res) => {
+  try {
+    const userId = req.auth.payload.sub;
+    await db.createRecommendation(userId);
+    const recommendedFlights = await db.getRecommendation(userId);
+    res.json({ flights: recommendedFlights });
+  } catch (error) {
+    console.log('Error during get recommended flights: ', error);
+    res.status(500).json({ message: 'Error getting flights', error: error.message });
   }
 });
 
