@@ -79,12 +79,12 @@ db.client.on('notification', async (msg) => {
       },
       body: JSON.stringify(message),
     });
+    await db.createRecommendation(userId);
     const result = await request.json();
     if (result.length === 3) {
       const flight1 = result[0];
       const flight2 = result[1];
       const flight3 = result[2];
-      await db.createRecommendation(userId);
       console.log('Notification received: ', result[0], result[1], result[2]);
       //await db.updateRecommendation(userId, flight1.id, flight2.id, flight3.id);
     }
@@ -197,17 +197,6 @@ app.get('/flights', async (req, res) => {
   }
 });
 
-app.get('/flights/:identifier', async (req, res) => {
-  try {
-    const flight = await db.getFlight(req.params.identifier);
-    res.json({ flight });
-  } catch (error) {
-    console.log('Error during get flight: ', error);
-    res
-      .status(500)
-      .json({ message: 'Error retrieving flight', error: error.message });
-  }
-});
 
 app.post('/flights', async (req, res) => {
   try {
@@ -468,6 +457,18 @@ app.post('/flights/validation', async (req, res) => {
       message: 'An error occurred sending the validation',
       error: error.message,
     });
+  }
+});
+
+app.get('/flights/:identifier', async (req, res) => {
+  try {
+    const flight = await db.getFlight(req.params.identifier);
+    res.json({ flight });
+  } catch (error) {
+    console.log('Error during get flight: ', error);
+    res
+      .status(500)
+      .json({ message: 'Error retrieving flight', error: error.message });
   }
 });
 
