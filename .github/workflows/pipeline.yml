@@ -79,8 +79,12 @@ jobs:
           ECR_REPOSITORY: deploy-backend
           IMAGE_TAG: latest
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker-compose build
+          docker tag deploy-backend:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Post Login to Amazon ECR
+        run: echo "ECR Login complete"
       
       
 
