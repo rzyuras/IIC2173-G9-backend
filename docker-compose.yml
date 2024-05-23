@@ -3,6 +3,7 @@ services:
     build:
       context: ./app
       dockerfile: Dockerfile
+    image: app:latest
     container_name: app
     restart: unless-stopped
     ports:
@@ -24,7 +25,6 @@ services:
       AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID}
       SESSION_SECRET: ${SESSION_SECRET}
 
-    
   db:
     image: postgres:15
     container_name: postgres
@@ -42,6 +42,7 @@ services:
     build:
       context: ./broker
       dockerfile: Dockerfile  
+    image: broker:latest
     container_name: broker
     restart: unless-stopped
     networks:
@@ -63,6 +64,3 @@ networks:
 
 volumes:
   postgres-data:
-  
-  
-  
