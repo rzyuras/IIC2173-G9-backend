@@ -1,4 +1,4 @@
-name: Docker Compose CI/CD
+name: Docker Compose CI
 
 on:
   push:
@@ -24,35 +24,16 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y docker-compose
-
+      
     - name: Setup environment variables
       run: |
         echo "DATABASE_USER=${{ secrets.DATABASE_USER }}" >> $GITHUB_ENV
         echo "DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}" >> $GITHUB_ENV
         echo "DATABASE_NAME=${{ secrets.DATABASE_NAME }}" >> $GITHUB_ENV
-        echo "MQTT_BROKER=${{ secrets.MQTT_BROKER }}" >> $GITHUB_ENV
-        echo "MQTT_PORT=${{ secrets.MQTT_PORT }}" >> $GITHUB_ENV
-        echo "MQTT_USER=${{ secrets.MQTT_USER }}" >> $GITHUB_ENV
-        echo "MQTT_PASSWORD=${{ secrets.MQTT_PASSWORD }}" >> $GITHUB_ENV
-        echo "AUTH0_ISSUER_BASE_URL=${{ secrets.AUTH0_ISSUER_BASE_URL }}" >> $GITHUB_ENV
-        echo "BASE_FRONT_URL=${{ secrets.BASE_FRONT_URL }}" >> $GITHUB_ENV
-        echo "AUTH0_CLIENT_ID=${{ secrets.AUTH0_CLIENT_ID }}" >> $GITHUB_ENV
-        echo "SESSION_SECRET=${{ secrets.SESSION_SECRET }}" >> $GITHUB_ENV
 
-    - name: Build Docker images
+    - name: Build and run Docker Compose services
       run: |
-        docker-compose -f docker-compose.yml build
-
-    - name: Tag Docker images
-      run: |
-        IMAGE_TAG=${GITHUB_SHA}
-        docker tag app_app:latest public.ecr.aws/a6z9o0z4/codedeploy/app:$IMAGE_TAG
-        docker tag app_broker:latest public.ecr.aws/a6z9o0z4/codedeploy/broker:$IMAGE_TAG
-        docker tag postgres:15 public.ecr.aws/a6z9o0z4/codedeploy/db:$IMAGE_TAG
-
-    - name: List Docker images
-      run: |
-        docker images  # List all Docker images to verify they exist
+        docker-compose -f docker-compose.yml up --build -d
 
   aws-deploy:
     needs: build
@@ -70,7 +51,6 @@ jobs:
         echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
         echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
         echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
-        echo "AWS_REGION=us-east-1" >> $GITHUB_ENV
 
     - name: Log in to Amazon ECR
       id: login-ecr
@@ -80,11 +60,15 @@ jobs:
       env:
         AWS_REGION: us-east-1
 
-    - name: Push Docker images to ECR
+    - name: Tag and push Docker images to ECR
       env:
         ECR_REPOSITORY: public.ecr.aws/a6z9o0z4/codedeploy
       run: |
         IMAGE_TAG=${GITHUB_SHA}
+        docker images
+        docker tag app:latest $ECR_REPOSITORY/app:$IMAGE_TAG
+        docker tag broker:latest $ECR_REPOSITORY/broker:$IMAGE_TAG
+        docker tag postgres:15 $ECR_REPOSITORY/db:$IMAGE_TAG
         docker push $ECR_REPOSITORY/app:$IMAGE_TAG
         docker push $ECR_REPOSITORY/broker:$IMAGE_TAG
         docker push $ECR_REPOSITORY/db:$IMAGE_TAG
