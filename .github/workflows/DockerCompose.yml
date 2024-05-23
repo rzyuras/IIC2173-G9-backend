@@ -35,5 +35,55 @@ jobs:
       run: |
         docker-compose -f docker-compose.yml up --build -d
 
+  aws-deploy:
+    needs: build
+    runs-on: ubuntu-latest
 
-  
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Setup environment variables
+      run: |
+        echo "DATABASE_USER=${{ secrets.DATABASE_USER }}" >> $GITHUB_ENV
+        echo "DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}" >> $GITHUB_ENV
+        echo "DATABASE_NAME=${{ secrets.DATABASE_NAME }}" >> $GITHUB_ENV
+        echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+        echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+        echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
+
+    - name: Log in to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+      with:
+        registry-type: public
+      env:
+        AWS_REGION: us-east-1
+
+    - name: Tag and push Docker images to ECR
+      env:
+        ECR_REPOSITORY: public.ecr.aws/a6z9o0z4/codedeploy
+      run: |
+        IMAGE_TAG=${GITHUB_SHA}
+        docker tag app:latest $ECR_REPOSITORY/app:$IMAGE_TAG
+        docker tag broker:latest $ECR_REPOSITORY/broker:$IMAGE_TAG
+        docker tag postgres:15 $ECR_REPOSITORY/db:$IMAGE_TAG
+        docker push $ECR_REPOSITORY/app:$IMAGE_TAG
+        docker push $ECR_REPOSITORY/broker:$IMAGE_TAG
+        docker push $ECR_REPOSITORY/db:$IMAGE_TAG
+
+    - name: Deploy to AWS CodeDeploy
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Deploy to AWS CodeDeploy
+      run: |
+        aws deploy create-deployment \
+          --application-name codedeploy \
+          --deployment-group-name codedeploygroup \
+          --github-location repository=rzyuras/IIC2173-G9-backend,commitId=${{ github.sha }}
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-east-1
