@@ -1,102 +1,89 @@
-name: Docker Compose CI/CD
+name: pipeline
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
-    types: [opened, synchronize]
+    types: [opened,synchronize]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
+  lint:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      - name: Install dependencies
+        run: npm install
+      - name: Run ESLint
+        run: npm run lint
+    
+  docker-check:
+    runs-on: ubuntu-22.04
     services:
       docker:
         image: docker:20.10.11
         options: --privileged
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
-
     - name: Set up Docker Compose
       run: |
         sudo apt-get update
         sudo apt-get install -y docker-compose
-
     - name: Setup environment variables
       run: |
         echo "DATABASE_USER=${{ secrets.DATABASE_USER }}" >> $GITHUB_ENV
         echo "DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}" >> $GITHUB_ENV
         echo "DATABASE_NAME=${{ secrets.DATABASE_NAME }}" >> $GITHUB_ENV
-        echo "MQTT_BROKER=${{ secrets.MQTT_BROKER }}" >> $GITHUB_ENV
-        echo "MQTT_PORT=${{ secrets.MQTT_PORT }}" >> $GITHUB_ENV
-        echo "MQTT_USER=${{ secrets.MQTT_USER }}" >> $GITHUB_ENV
-        echo "MQTT_PASSWORD=${{ secrets.MQTT_PASSWORD }}" >> $GITHUB_ENV
-        echo "AUTH0_ISSUER_BASE_URL=${{ secrets.AUTH0_ISSUER_BASE_URL }}" >> $GITHUB_ENV
-        echo "BASE_FRONT_URL=${{ secrets.BASE_FRONT_URL }}" >> $GITHUB_ENV
-        echo "AUTH0_CLIENT_ID=${{ secrets.AUTH0_CLIENT_ID }}" >> $GITHUB_ENV
-        echo "SESSION_SECRET=${{ secrets.SESSION_SECRET }}" >> $GITHUB_ENV
-
-    - name: Build Docker images
+    - name: Build and run Docker Compose services
       run: |
-        docker-compose -f docker-compose.yml build
-
-    - name: List Docker images
-      run: |
-        docker images  # List all Docker images to verify they exist
-
-    - name: Log in to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
-      with:
-        registry-type: public
-      env:
-        AWS_REGION: us-east-1
-
-    - name: Tag and push Docker images to ECR
-      env:
-        ECR_REPOSITORY: public.ecr.aws/a6z9o0z4/codedeploy
-      run: |
-        IMAGE_TAG=${GITHUB_SHA}
-        docker tag app:latest $ECR_REPOSITORY/app:$IMAGE_TAG
-        docker tag broker:latest $ECR_REPOSITORY/broker:$IMAGE_TAG
-        docker tag postgres:15 $ECR_REPOSITORY/db:$IMAGE_TAG
-        docker push $ECR_REPOSITORY/app:$IMAGE_TAG
-        docker push $ECR_REPOSITORY/broker:$IMAGE_TAG
-        docker push $ECR_REPOSITORY/db:$IMAGE_TAG
-
-  aws:
-    needs: build
-    runs-on: ubuntu-latest
+        docker-compose -f docker-compose.yml up --build -d
+  
+  aws-deploy:
+    runs-on: ubuntu-22.04
+    needs: docker-check
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Setup environment variables
-      run: |
-        echo "DATABASE_USER=${{ secrets.DATABASE_USER }}" >> $GITHUB_ENV
-        echo "DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}" >> $GITHUB_ENV
-        echo "DATABASE_NAME=${{ secrets.DATABASE_NAME }}" >> $GITHUB_ENV
-        echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
-        echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
-        echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
-        echo "AWS_REGION=us-east-1" >> $GITHUB_ENV
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with: 
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+      
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry-type: public
 
-    - name: Deploy to AWS CodeDeploy
-      uses: webfactory/ssh-agent@v0.5.3
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: deploy-backend
+          IMAGE_TAG: latest
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+      
+      
 
-    - name: Deploy to AWS CodeDeploy
-      run: |
-        aws deploy create-deployment \
-          --application-name codedeploy \
-          --deployment-group-name codedeploygroup \
-          --github-location repository=rzyuras/IIC2173-G9-backend,commitId=${{ github.sha }}
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_DEFAULT_REGION: us-east-1
+
+
