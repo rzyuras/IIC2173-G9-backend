@@ -43,6 +43,12 @@ jobs:
       run: |
         docker-compose -f docker-compose.yml build
 
+    - name: Tag Docker images
+      run: |
+        IMAGE_TAG=${GITHUB_SHA}
+        docker tag $(docker-compose images -q app) public.ecr.aws/a6z9o0z4/codedeploy/app:$IMAGE_TAG
+        docker tag $(docker-compose images -q broker) public.ecr.aws/a6z9o0z4/codedeploy/broker:$IMAGE_TAG
+
     - name: List Docker images
       run: |
         docker images  # List all Docker images to verify they exist
@@ -73,17 +79,13 @@ jobs:
       env:
         AWS_REGION: us-east-1
 
-    - name: Tag and push Docker images to ECR
+    - name: Push Docker images to ECR
       env:
         ECR_REPOSITORY: public.ecr.aws/a6z9o0z4/codedeploy
       run: |
         IMAGE_TAG=${GITHUB_SHA}
-        docker tag app:latest $ECR_REPOSITORY/app:$IMAGE_TAG
-        docker tag broker:latest $ECR_REPOSITORY/broker:$IMAGE_TAG
-        docker tag postgres:15 $ECR_REPOSITORY/db:$IMAGE_TAG
         docker push $ECR_REPOSITORY/app:$IMAGE_TAG
         docker push $ECR_REPOSITORY/broker:$IMAGE_TAG
-        docker push $ECR_REPOSITORY/db:$IMAGE_TAG
 
     - name: Deploy to AWS CodeDeploy
       uses: webfactory/ssh-agent@v0.5.3
