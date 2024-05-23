@@ -76,13 +76,17 @@ jobs:
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: deploy-backend
+          APP_REPOSITORY: build-app
+          BROKER_REPOSITORY: build-broker
           IMAGE_TAG: latest
         run: |
           docker-compose build
-          docker tag deploy-backend:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag app:latest $ECR_REGISTRY/$APP_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$APP_REPOSITORY:$IMAGE_TAG
 
+          docker tag broker:latest $ECR_REGISTRY/$BROKER_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$BROKER_REPOSITORY:$IMAGE_TAG
+          
       - name: Post Login to Amazon ECR
         run: echo "ECR Login complete"
       
