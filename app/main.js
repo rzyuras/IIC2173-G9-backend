@@ -57,24 +57,41 @@ const db = new Database(pgDbname, pgUser, pgPassword, pgHost);
 db.connect();
 
 db.client.on('notification', async (msg) => {
-  const payload = JSON.parse(msg.payload);
-  const userId = payload.user_id;
-  const flightId = payload.flight_id; // arreglar
-  const lastFlight = await db.getFlight(flightId);
-  const latitudeIp = payload.latitude_ip;
-  const longitudeIp = payload.longitude_ip;
-  console.log(userId, flightId, lastFlight, latitudeIp, longitudeIp)
-  // Hacer un post al worker.matiasoliva.me
-  const request = await fetch('https://worker.matiasoliva.me/job', {
-    method: 'POST',
-    body: JSON.stringify({
-      userId,
-      lastFlight,
-      latitudeIp,
-      longitudeIp,
-    }),
-  });
-  console.log("request:", request.body, request.status)
+  try {
+    const payload = JSON.parse(msg.payload);
+    const userId = payload.user_id;
+    const flightId = payload.flight_id; // arreglar
+    const lastFlight = await db.getFlight(flightId);
+    const latitudeIp = payload.latitude_ip;
+    const longitudeIp = payload.longitude_ip;
+    // Hacer un post al worker.matiasoliva.me
+    const message = {
+      userId: userId,
+      lastFlight: lastFlight,
+      latitudeIp: latitudeIp,
+      longitudeIp: longitudeIp,
+    };
+
+    const request = await fetch('https://worker.matiasoliva.me/job', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(message),
+    });
+    await db.createRecommendation(userId);
+    const result = await request.json();
+    if (result.length === 3) {
+      const flight1 = result[0];
+      const flight2 = result[1];
+      const flight3 = result[2];
+      console.log('Notification received: ', result[0], result[1], result[2]);
+      //await db.updateRecommendation(userId, flight1.id, flight2.id, flight3.id);
+    }
+
+  } catch (error) {
+    console.log('Error during notification: ', error);
+  }
 });
 
 db.client.query('LISTEN table_update');
@@ -180,17 +197,6 @@ app.get('/flights', async (req, res) => {
   }
 });
 
-app.get('/flights/:identifier', async (req, res) => {
-  try {
-    const flight = await db.getFlight(req.params.identifier);
-    res.json({ flight });
-  } catch (error) {
-    console.log('Error during get flight: ', error);
-    res
-      .status(500)
-      .json({ message: 'Error retrieving flight', error: error.message });
-  }
-});
 
 app.post('/flights', async (req, res) => {
   try {
@@ -210,6 +216,18 @@ app.post('/flights', async (req, res) => {
       message: 'An error occurred inserting the flight',
       error: error.message,
     });
+  }
+});
+
+app.get('/flights/recommendations', jwtCheck, async (req, res) => {
+  try {
+    const userId = req.auth.payload.sub;
+    await db.createRecommendation(userId);
+    const recommendedFlights = await db.getRecommendation(userId);
+    res.json({ flights: recommendedFlights });
+  } catch (error) {
+    console.log('Error during get recommended flights: ', error);
+    res.status(500).json({ message: 'Error getting flights', error: error.message });
   }
 });
 
@@ -342,7 +360,7 @@ app.post('/flights/commit', jwtCheck, async (req, res) => {
           if (error) {
             console.log(error);
           } else {
-            console.log('Email sent: ' + info.response);
+            //
           }
         });
 
@@ -416,7 +434,6 @@ app.post('/flights/validation', async (req, res) => {
           if (response.ok) {
             const result = await response.json(); 
             const receiptUrl = result.url; 
-            console.log("receiptUrl", receiptUrl)
             await db.updateReceiptUrl(requestId, receiptUrl);
             await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
             res.status(200).json({ message: 'Purchase validated, flight updated, and PDF generated', receiptUrl: receiptUrl });
@@ -440,6 +457,18 @@ app.post('/flights/validation', async (req, res) => {
       message: 'An error occurred sending the validation',
       error: error.message,
     });
+  }
+});
+
+app.get('/flights/:identifier', async (req, res) => {
+  try {
+    const flight = await db.getFlight(req.params.identifier);
+    res.json({ flight });
+  } catch (error) {
+    console.log('Error during get flight: ', error);
+    res
+      .status(500)
+      .json({ message: 'Error retrieving flight', error: error.message });
   }
 });
 

@@ -33,6 +33,19 @@ CREATE TABLE IF NOT EXISTS purchases (
       FOREIGN KEY (flight_id) REFERENCES flights(id)
     );
 
+-- recommendations table
+CREATE TABLE IF NOT EXISTS recommendations (
+      user_id VARCHAR(255) PRIMARY KEY,
+      flight1 INT,
+      flight2 INT,
+      flight3 INT,
+      createAt TIMESTAMPTZ DEFAULT NOW(),
+      updateAt TIMESTAMPTZ DEFAULT NOW(),
+      FOREIGN KEY (flight1) REFERENCES flights(id),
+      FOREIGN KEY (flight2) REFERENCES flights(id),
+      FOREIGN KEY (flight3) REFERENCES flights(id)
+    );
+
 
 -- trigger function
 CREATE OR REPLACE FUNCTION function_approved()
