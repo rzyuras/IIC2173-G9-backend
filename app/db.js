@@ -146,8 +146,8 @@ class Database {
   async updatePurchaseDir(requestId, latitudeIp, longitudeIp) {
     const updateQuery = `
         UPDATE purchases
-        SET latitudeIp = $1,
-            longitudeIp = $2
+        SET latitude_ip = $1,
+            longitude_ip = $2
         WHERE uuid = $3;
     `;
     await this.client.query(updateQuery, [
