@@ -39,8 +39,8 @@ CREATE TABLE IF NOT EXISTS recommendations (
       flight1 INT,
       flight2 INT,
       flight3 INT,
-      createdAt TIMESTAMPTZ DEFAULT NOW(),
-      updatedAt TIMESTAMPTZ DEFAULT NOW(),
+      "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+      "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
       FOREIGN KEY (flight1) REFERENCES flights(id),
       FOREIGN KEY (flight2) REFERENCES flights(id),
       FOREIGN KEY (flight3) REFERENCES flights(id)
