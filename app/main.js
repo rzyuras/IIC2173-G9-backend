@@ -85,8 +85,7 @@ db.client.on('notification', async (msg) => {
       const flight1 = result[0];
       const flight2 = result[1];
       const flight3 = result[2];
-      console.log('Notification received: ', result[0], result[1], result[2]);
-      //await db.updateRecommendation(userId, flight1.id, flight2.id, flight3.id);
+      await db.updateRecommendation(userId, flight1.id, flight2.id, flight3.id);
     }
 
   } catch (error) {
