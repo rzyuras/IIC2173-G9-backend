@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS purchases (
     );
 
 -- recommendations table
-CREATE TABLE IF NOT EXIST recommendations (
+CREATE TABLE IF NOT EXISTS recommendations (
       user_id VARCHAR(255) PRIMARY KEY,
       flight1 INT,
       flight2 INT,
