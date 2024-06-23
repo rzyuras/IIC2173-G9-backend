@@ -13,7 +13,7 @@ docker-compose up -d
 
 Para hacer un rebuild:
 ```bash
-docker-compose up -d -build
+docker-compose up -d --build
 ```
 
 Para borrar todo lo relacionado con docker:

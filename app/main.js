@@ -5,17 +5,18 @@ const { v4: uuidv4 } = require('uuid');
 const moment = require('moment-timezone');
 const { auth, claimCheck } = require('express-oauth2-jwt-bearer');
 const cors = require('cors');
+const jwtDecode = require('jwt-decode');
+const nodemailer = require('nodemailer');
 const Database = require('./db');
 const tx = require('./trx');
-const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: 'munoz.hernandez.lorenzo@gmail.com',
-    pass: 'veof xwcs jzcy kjyh'
-  }
+    pass: 'veof xwcs jzcy kjyh',
+  },
 });
 
 const jwtCheck = auth({
@@ -42,6 +43,14 @@ const corsOptions = {
   allowMethods: ['GET', 'HEAD', 'OPTIONS', 'PUT', 'POST', 'DELETE', 'PATCH'],
 };
 
+const checkAdmin = (req, res, next) => {
+  const role = req.auth.payload['https://matiasoliva.me/role'];
+  if (role && role.includes('Admin')) {
+    return next();
+  }
+  return res.status(403).json({ message: 'Unauthorized: Admin Role Required' });
+};
+
 // Datos de conexión PostgreSQL
 const pgDbname = process.env.DATABASE_NAME;
 const pgUser = process.env.DATABASE_USER;
@@ -66,16 +75,16 @@ db.client.on('notification', async (msg) => {
     const longitudeIp = payload.longitude_ip;
     // Hacer un post al worker.matiasoliva.me
     const message = {
-      userId: userId,
-      lastFlight: lastFlight,
-      latitudeIp: latitudeIp,
-      longitudeIp: longitudeIp,
+      userId,
+      lastFlight,
+      latitudeIp,
+      longitudeIp,
     };
 
     const request = await fetch('https://8ilp4td039.execute-api.us-east-2.amazonaws.com/dev/job', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify(message),
     });
@@ -87,7 +96,6 @@ db.client.on('notification', async (msg) => {
       const flight3 = result[2];
       await db.updateRecommendation(userId, flight1.id, flight2.id, flight3.id);
     }
-
   } catch (error) {
     console.log('Error during notification: ', error);
   }
@@ -196,7 +204,6 @@ app.get('/flights', async (req, res) => {
   }
 });
 
-
 app.post('/flights', async (req, res) => {
   try {
     const { body } = req;
@@ -254,10 +261,11 @@ app.post('/flights/request', jwtCheck, async (req, res) => { // no poder comprar
       purchase_status: 'pending',
       uuid: uuidv4(),
       quantity: body.quantity,
-      username: body.name
+      username: body.name,
+      purchase_type: body.purchase_type,
+      action_type: 'seller0',
     });
 
-    
     // WebPay Integration
     const ticket = await tx.create(String(purchase.id), 'test-g9', amount, `${process.env.BASE_FRONT_URL}/purchase`);
 
@@ -273,6 +281,57 @@ app.post('/flights/request', jwtCheck, async (req, res) => { // no poder comprar
       deposit_token: ticket.token,
       quantity: body.quantity,
       seller: 0,
+    };
+
+    db.updatePurchaseDir(purchase.uuid, body.latitudeIp, body.longitudeIp);
+    client.publish('flights/requests', JSON.stringify(message));
+
+    res.status(201).json({
+      status: 'ok',
+      purchase_uuid: purchase.uuid,
+      ticket,
+
+    });
+  } catch (error) {
+    console.log('Error during request purchase: ', error);
+    res.status(500).json({
+      message: 'An error occurred processing the request purchase in flight/request',
+      error: error.message,
+    });
+  }
+});
+
+app.post('/flights/admin/request', jwtCheck, checkAdmin, async (req, res) => { // no poder comprar si no es admin!!!!!!!!!!!!!!!
+  try {
+    const { body } = req;
+    const flight = await db.getFlight(body.flight_id);
+    const amount = body.quantity * flight.price;
+    const purchase = await db.insertPurchase({
+      flight_id: body.flight_id,
+      user_id: req.auth.payload.sub,
+      purchase_status: 'pending',
+      uuid: uuidv4(),
+      quantity: body.quantity,
+      username: body.name,
+      purchase_type: 'standard',
+      action_type: 'seller9',
+    });
+
+    // WebPay Integration
+    const ticket = await tx.create(String(purchase.id), 'test-g9', amount, `${process.env.BASE_FRONT_URL}/purchase`);
+
+    const message = {
+      request_id: purchase.uuid,
+      group_id: '9',
+      departure_airport: flight.departure_airport_id,
+      arrival_airport: flight.arrival_airport_id,
+      departure_time: moment(flight.departure_airport_time)
+        .tz('America/Santiago')
+        .format('YYYY-MM-DD HH:mm'),
+      datetime: moment().tz('America/Santiago').format('YYYY-MM-DD HH:mm'),
+      deposit_token: ticket.token,
+      quantity: body.quantity,
+      seller: 9,
     };
 
     db.updatePurchaseDir(purchase.uuid, body.latitudeIp, body.longitudeIp);
@@ -341,8 +400,10 @@ app.post(
 app.post('/flights/commit', jwtCheck, async (req, res) => {
   try {
     const purchaseUuid = req.body.purchase_uuid;
+    const purchase = await db.getPurchaseByUuid(purchaseUuid);
+    const { action_type } = purchase;
     const wsToken = req.body.ws_token;
-    const userEmail = req.body.userEmail;
+    const { userEmail } = req.body;
     if (wsToken) {
       const commitedTx = await tx.commit(wsToken);
       var commitedStatus = commitedTx.status === 'AUTHORIZED';
@@ -354,8 +415,7 @@ app.post('/flights/commit', jwtCheck, async (req, res) => {
           text: '¡Tu pago ha sido recibido exitosamente!\n\nGracias por comprar en FlightsApp.\nVolar nunca fue tan fácil😉',
           html: '<strong>¡Tu pago ha sido recibido exitosamente!</strong><br><br>Gracias por comprar en FlightsApp.<br>Volar nunca fue tan fácil😉',
         };
-        
-        transporter.sendMail(mailOptions, function(error, info){
+        transporter.sendMail(mailOptions, (error, info) => {
           if (error) {
             console.log(error);
           } else {
@@ -375,7 +435,7 @@ app.post('/flights/commit', jwtCheck, async (req, res) => {
     const message = {
       request_id: purchaseUuid,
       group_id: '9',
-      seller: '0',
+      seller: action_type === 'seller9' ? 9 : 0,
       valid: commitedStatus,
     };
     client.publish('flights/validation', JSON.stringify(message));
@@ -399,17 +459,18 @@ app.post('/flights/validation', async (req, res) => {
 
       if (purchase) {
         const flight = await db.getFlight(purchase.flight_id);
-        const flightTickets = parseInt(flight.flight_tickets);
-        if (parseInt(purchase.quantity) > flightTickets) {
+        const flightTickets = parseInt(flight.flight_tickets, 10);
+        if (parseInt(purchase.quantity, 10) > flightTickets) {
           validation = false;
         }
         if (validation) {
           const purchaseData = await db.updatePurchaseStatus(requestId, 'approved');
+
           const pdfData = {
-            userName: purchase.username,  
+            userName: purchase.username,
             flightDetails: {
               flightId: flight.id,
-              airline_logo: flight.airline_logo_url,  
+              airline_logo: flight.airline_logo_url,
               airline: flight.airline,
               departure_airport_time: flight.departure_airport_time,
               departure_airport_id: flight.departure_airport_id,
@@ -417,33 +478,41 @@ app.post('/flights/validation', async (req, res) => {
               arrival_airport_time: flight.arrival_airport_time,
               arrival_airport_id: flight.arrival_airport_id,
               arrival_airport_name: flight.arrival_airport_name,
-              price: flight.price
+              price: flight.price,
             },
             receiptId: purchase.uuid,
             quantity: purchase.quantity,
-            totalPrice: flight.price * purchase.quantity
+            totalPrice: flight.price * purchase.quantity,
           };
           try {
             const response = await fetch('https://y9bbgbpn0h.execute-api.us-east-2.amazonaws.com/dev/generate-pdf', {
-            method: 'POST',
-            body: JSON.stringify(pdfData),
-          });
+              method: 'POST',
+              body: JSON.stringify(pdfData),
+            });
 
+            if (response.ok) {
+              const result = await response.json();
+              const receiptUrl = result.url;
+              await db.updateReceiptUrl(requestId, receiptUrl);
 
-          if (response.ok) {
-            const result = await response.json(); 
-            const receiptUrl = result.url; 
-            await db.updateReceiptUrl(requestId, receiptUrl);
-            await db.updateFlight(purchaseData.quantity, purchaseData.flight_id);
-            res.status(200).json({ message: 'Purchase validated, flight updated, and PDF generated', receiptUrl: receiptUrl });
-          } else {
-            res.status(response.status).json({ message: 'Purchase validated and flight updated, but error generating PDF' });
-          }
+              if (purchase.purchase_type === 'standard') {
+                await db.updateFlightTickets(purchaseData.quantity, purchaseData.flight_id);
+              } else if (purchase.purchase_type === 'group') {
+                await db.updateGroupTickets(purchaseData.quantity, purchaseData.flight_id);
+              } else {
+                console.log('Invalid purchase type');
+              }
+              if (body.seller === 9) {
+                await db.updateGroupTickets(-1 * purchaseData.quantity, purchaseData.flight_id);
+              }
 
+              res.status(200).json({ message: 'Purchase validated, flight updated, and PDF generated', receiptUrl });
+            } else {
+              res.status(response.status).json({ message: 'Purchase validated and flight updated, but error generating PDF' });
+            }
           } catch (error) {
             console.log('Error during PDF generation: ', error);
           }
-          
         } else {
           await db.updatePurchaseStatus(requestId, 'rejected');
           res.status(200).json({ message: 'Purchase rejected due to insufficient tickets' });

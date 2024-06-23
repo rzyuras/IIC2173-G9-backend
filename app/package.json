@@ -10,6 +10,7 @@
     "express-oauth2-jwt-bearer": "^1.6.0",
     "express-openid-connect": "^2.17.1",
     "express-validator": "^7.1.0",
+    "jwt-decode": "^4.0.0",
     "moment-timezone": "^0.5.45",
     "mqtt": "^5.5.2",
     "nodemailer": "^6.9.13",
