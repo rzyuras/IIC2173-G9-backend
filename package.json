@@ -7,6 +7,7 @@
     "express": "^4.19.2",
     "express-oauth2-jwt-bearer": "^1.6.0",
     "jose": "^5.2.4",
+    "jwt-decode": "^4.0.0",
     "moment-timezone": "^0.5.45",
     "mqtt": "^5.5.2",
     "pg": "^8.11.5",

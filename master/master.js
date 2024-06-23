@@ -20,37 +20,37 @@ async function produceRecommendation(userId, latitudeIp, longitudeIp, lastFlight
 }
 
 app.post('/job', async (req, res) => {
-    try {
-      const job = await queue.add('flightTask', req.body);
-      res.status(201).send({ jobId: job.id });
-    } catch (error) {
-      res.status(500).send({ error: error.message });
+  try {
+    const job = await queue.add('flightTask', req.body);
+    res.status(201).send({ jobId: job.id });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+// Endpoint para obtener el estado de un job
+app.get('/job/:id', async (req, res) => {
+  try {
+    const job = await queue.getJob(req.params.id);
+    if (job) {
+      const state = await job.getState();
+      const progress = await job.progress();
+      res.send({ id: job.id, state, progress });
+    } else {
+      res.status(404).send({ error: 'Job not found' });
     }
-  });
-  
-  // Endpoint para obtener el estado de un job
-  app.get('/job/:id', async (req, res) => {
-    try {
-      const job = await queue.getJob(req.params.id);
-      if (job) {
-        const state = await job.getState();
-        const progress = await job.progress();
-        res.send({ id: job.id, state, progress });
-      } else {
-        res.status(404).send({ error: 'Job not found' });
-      }
-    } catch (error) {
-      res.status(500).send({ error: error.message });
-    }
-  });
-  
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
 // Endpoint para verificar si el servicio está operativo
 app.get('/heartbeat', (req, res) => {
-    res.send({ status: 'running' });
+  res.send({ status: 'running' });
 });
 
 app.listen(port, () => {
-    console.log(`Master API running on port ${port}`);
+  console.log(`Master API running on port ${port}`);
 });
 
 module.exports = { produceRecommendation };

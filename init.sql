@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS flights (
       price NUMERIC,
       currency CHAR(3),
       airline_logo_url VARCHAR(255),
-      flight_tickets INT DEFAULT 90
+      flight_tickets INT DEFAULT 90,
+      group_tickets INT DEFAULT 0
     );
 
 -- purchase table
@@ -30,6 +31,8 @@ CREATE TABLE IF NOT EXISTS purchases (
       longitude_ip NUMERIC,
       uuid VARCHAR(255) NOT NULL,
       receipt_url VARCHAR(255),
+      purchase_type VARCHAR(20) CHECK (purchase_type IN ('standard', 'group')) NOT NULL,
+      action_type VARCHAR(20) CHECK (action_type IN ('seller9', 'seller0')) NOT NULL,
       FOREIGN KEY (flight_id) REFERENCES flights(id)
     );
 
