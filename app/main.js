@@ -1,3 +1,4 @@
+require('newrelic');
 const express = require('express');
 const { validationResult, body } = require('express-validator');
 const mqtt = require('mqtt');
