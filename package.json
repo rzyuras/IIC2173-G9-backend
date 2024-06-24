@@ -10,6 +10,7 @@
     "jwt-decode": "^4.0.0",
     "moment-timezone": "^0.5.45",
     "mqtt": "^5.5.2",
+    "newrelic": "^11.19.0",
     "pg": "^8.11.5",
     "request": "^2.88.2",
     "transbank-sdk": "^5.0.0"
