@@ -2,6 +2,12 @@
 .env
 .pem
 
+# Terraform state files
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
 # Other common directories to ignore
 node_modules/
 dist/

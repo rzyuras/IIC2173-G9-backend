@@ -1,31 +1,11 @@
-name: pipeline
+name: Deploy Pipeline
 
 on:
   push:
-    branches: [main]
+    tags:
+      - 'v*.*.*'
 
 jobs:
-  lint:
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-      - name: Cache node modules
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-      - name: Install dependencies
-        run: npm install
-      - name: Run ESLint
-        run: npm run lint
-    
   docker-check:
     runs-on: ubuntu-22.04
     services:
@@ -33,21 +13,21 @@ jobs:
         image: docker:20.10.11
         options: --privileged
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-    - name: Set up Docker Compose
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y docker-compose
-    - name: Setup environment variables
-      run: |
-        echo "DATABASE_USER=${{ secrets.DATABASE_USER }}" >> $GITHUB_ENV
-        echo "DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}" >> $GITHUB_ENV
-        echo "DATABASE_NAME=${{ secrets.DATABASE_NAME }}" >> $GITHUB_ENV
-    - name: Build and run Docker Compose services
-      run: |
-        docker-compose -f docker-compose.yml up --build -d
-  
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+      - name: Setup environment variables
+        run: |
+          echo "DATABASE_USER=${{ secrets.DATABASE_USER }}" >> $GITHUB_ENV
+          echo "DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}" >> $GITHUB_ENV
+          echo "DATABASE_NAME=${{ secrets.DATABASE_NAME }}" >> $GITHUB_ENV
+      - name: Build and run Docker Compose services
+        run: |
+          docker-compose -f docker-compose.yml up --build -d
+    
   aws-deploy:
     runs-on: ubuntu-22.04
     needs: docker-check
@@ -68,16 +48,13 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
         with:
           registry-type: public
-            
 
-
-      
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
         env:
           ECR_REGISTRY: public.ecr.aws/a6z9o0z4
           ECR_REPOSITORY: deploy-backend
-          IMAGE_TAG: latest
+          IMAGE_TAG: ${{ github.ref_name }}
         run: |
           docker-compose build
           docker tag app:latest $ECR_REGISTRY/$ECR_REPOSITORY:app-$IMAGE_TAG
@@ -87,8 +64,3 @@ jobs:
 
       - name: Post Login to Amazon ECR
         run: echo "ECR Login complete"
-      
-      
-
-
-
