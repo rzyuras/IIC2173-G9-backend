@@ -2,7 +2,8 @@ name: pipeline
 
 on:
   push:
-    branches: [main]
+    tags:
+      - 'v*.*.*'
 
 jobs:
   lint:
@@ -77,7 +78,7 @@ jobs:
         env:
           ECR_REGISTRY: public.ecr.aws/a6z9o0z4
           ECR_REPOSITORY: deploy-backend
-          IMAGE_TAG: latest
+          IMAGE_TAG: ${{ github.ref_name }}
         run: |
           docker-compose build
           docker tag app:latest $ECR_REGISTRY/$ECR_REPOSITORY:app-$IMAGE_TAG
@@ -87,8 +88,3 @@ jobs:
 
       - name: Post Login to Amazon ECR
         run: echo "ECR Login complete"
-      
-      
-
-
-
