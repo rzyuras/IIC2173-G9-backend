@@ -71,10 +71,20 @@ class Database {
     await this.client.query(insertQuery, values);
   }
 
-  async updateFlight(quantity, flightId) {
+  async updateFlightTickets(quantity, flightId) {
     const updateQuery = `
             UPDATE flights
             SET flight_tickets = flight_tickets - $1
+            WHERE id = $2
+        `;
+    const values = [quantity, flightId];
+    await this.client.query(updateQuery, values);
+  }
+
+  async updateGroupTickets(quantity, flightId) {
+    const updateQuery = `
+            UPDATE flights
+            SET group_tickets = group_tickets - $1
             WHERE id = $2
         `;
     const values = [quantity, flightId];
@@ -108,9 +118,9 @@ class Database {
   async insertPurchase(data) {
     const insertQuery = `
             INSERT INTO purchases 
-            (flight_id, user_id, purchase_status, quantity, uuid, username) 
+            (flight_id, user_id, purchase_status, quantity, uuid, username, purchase_type, action_type) 
             VALUES 
-            ($1, $2, $3, $4, $5, $6)
+            ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *;
         `;
     const values = [
@@ -120,6 +130,8 @@ class Database {
       data.quantity,
       data.uuid,
       data.username,
+      data.purchase_type,
+      data.action_type,
     ];
     const result = await this.client.query(insertQuery, values);
     return result.rows[0];
@@ -141,7 +153,6 @@ class Database {
     }
     return null; // O manejar según corresponda cuando no hay filas actualizadas
   }
-
 
   async updatePurchaseDir(requestId, latitudeIp, longitudeIp) {
     const updateQuery = `
@@ -165,7 +176,7 @@ class Database {
     `;
     await this.client.query(updateQuery, [url, uuid]);
   }
-  
+
   async createRecommendation(userId) {
     const insertQuery = `
             INSERT INTO recommendations 
