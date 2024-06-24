@@ -49,6 +49,45 @@ CREATE TABLE IF NOT EXISTS recommendations (
       FOREIGN KEY (flight3) REFERENCES flights(id)
     );
 
+-- auctions table
+CREATE TABLE IF NOT EXISTS auctions (
+    auction_id VARCHAR(255) PRIMARY KEY,
+    proposal_id VARCHAR(255),
+    departure_airport VARCHAR(255),
+    arrival_airport VARCHAR(255),
+    departure_time TIMESTAMPTZ,
+    airline VARCHAR(255),
+    quantity INT,
+    group_id INT,
+    type VARCHAR(255)
+);
+
+-- proposals table
+CREATE TABLE IF NOT EXISTS proposals (
+    auction_id VARCHAR(255),
+    proposal_id VARCHAR(255) PRIMARY KEY,
+    departure_airport VARCHAR(255),
+    arrival_airport VARCHAR(255),
+    departure_time TIMESTAMPTZ,
+    airline VARCHAR(255),
+    quantity INT,
+    group_id INT,
+    type VARCHAR(255)
+);
+
+-- responses table
+CREATE TABLE IF NOT EXISTS responses (
+    auction_id VARCHAR(255),
+    proposal_id VARCHAR(255),
+    departure_airport VARCHAR(255),
+    arrival_airport VARCHAR(255),
+    departure_time TIMESTAMPTZ,
+    airline VARCHAR(255),
+    quantity INT,
+    group_id INT,
+    type VARCHAR(255)
+);
+
 
 -- trigger function
 CREATE OR REPLACE FUNCTION function_approved()

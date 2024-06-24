@@ -207,6 +207,79 @@ class Database {
     return result.rows[0];
   }
 
+  async getAllAuctions() {
+    const query = `SELECT * FROM auctions`;
+    const result = await this.client.query(query);
+    return result.rows;
+}
+
+async insertAuction(data) {
+    const insertQuery = `
+        INSERT INTO auctions 
+        (auction_id, proposal_id, departure_airport, arrival_airport, departure_time, 
+        airline, quantity, group_id, type) 
+        VALUES 
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `;
+    const values = [
+        data.auction_id,
+        data.proposal_id,
+        data.departure_airport,
+        data.arrival_airport,
+        data.departure_time,
+        data.airline,
+        data.quantity,
+        data.group_id,
+        data.type,
+    ];
+    await this.client.query(insertQuery, values);
+}
+
+async insertProposal(data) {
+    const insertQuery = `
+        INSERT INTO proposals 
+        (auction_id, proposal_id, departure_airport, arrival_airport, departure_time, 
+        airline, quantity, group_id, type) 
+        VALUES 
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `;
+    const values = [
+        data.auction_id,
+        data.proposal_id,
+        data.departure_airport,
+        data.arrival_airport,
+        data.departure_time,
+        data.airline,
+        data.quantity,
+        data.group_id,
+        data.type,
+    ];
+    await this.client.query(insertQuery, values);
+}
+
+async insertResponse(data) {
+    const insertQuery = `
+        INSERT INTO responses 
+        (auction_id, proposal_id, departure_airport, arrival_airport, departure_time, 
+        airline, quantity, group_id, type) 
+        VALUES 
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `;
+    const values = [
+        data.auction_id,
+        data.proposal_id,
+        data.departure_airport,
+        data.arrival_airport,
+        data.departure_time,
+        data.airline,
+        data.quantity,
+        data.group_id,
+        data.type,
+    ];
+    await this.client.query(insertQuery, values);
+}
+
+
   async close() {
     await this.client.end();
   }

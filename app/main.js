@@ -541,7 +541,84 @@ app.get('/flights/:identifier', async (req, res) => {
   }
 });
 
+app.get('/flights/auctions', jwtCheck, checkAdmin, async (req, res) => {
+  try {
+    const auctions = await db.getAllAuctions();
+    res.json({ auctions });
+  } catch (error) {
+    res.status(500).json({ message: 'Error retrieving auctions', error: error.message });
+  }
+});
+
+
+app.post('/flights/auctions', jwtCheck, checkAdmin, async (req, res) => {
+  try {
+    const auction = {
+      auction_id: uuidv4(),
+      proposal_id: "",
+      departure_airport: req.body.departure_airport,
+      arrival_airport: req.body.arrival_airport,
+      departure_time: moment.tz(req.body.departure_time, 'YYYY-MM-DD HH:mm', 'America/Santiago').utc().format(),
+      airline: req.body.airline,
+      quantity: req.body.quantity,
+      group_id: req.body.group_id,
+      type: 'offer'
+    };
+    await db.insertAuction(auction);
+    client.publish('flights/auctions', JSON.stringify(auction));
+    res.status(201).json({ message: 'Auction created successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating auction', error: error.message });
+  }
+});
+
+
+app.post('/flights/auctions/proposal', jwtCheck, checkAdmin, async (req, res) => {
+  try {
+    const proposal = {
+      auction_id: req.body.auction_id,
+      proposal_id: uuidv4(),
+      departure_airport: req.body.departure_airport,
+      arrival_airport: req.body.arrival_airport,
+      departure_time: moment.tz(req.body.departure_time, 'YYYY-MM-DD HH:mm', 'America/Santiago').utc().format(),
+      airline: req.body.airline,
+      quantity: req.body.quantity,
+      group_id: req.body.group_id,
+      type: 'proposal'
+    };
+    await db.insertProposal(proposal);
+    client.publish('flights/auctions', JSON.stringify(proposal));
+    res.status(201).json({ message: 'Proposal created successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating proposal', error: error.message });
+  }
+});
+
+
+app.post('/flights/auctions/response', jwtCheck, checkAdmin, async (req, res) => {
+  try {
+    const response = {
+      auction_id: req.body.auction_id,
+      proposal_id: req.body.proposal_id,
+      departure_airport: req.body.departure_airport,
+      arrival_airport: req.body.arrival_airport,
+      departure_time: moment.tz(req.body.departure_time, 'YYYY-MM-DD HH:mm', 'America/Santiago').utc().format(),
+      airline: req.body.airline,
+      quantity: req.body.quantity,
+      group_id: req.body.group_id,
+      type: req.body.type 
+    };
+    await db.insertResponse(response);
+    client.publish('flights/auctions', JSON.stringify(response));
+    res.status(201).json({ message: 'Response sent successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error sending response', error: error.message });
+  }
+});
+
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
