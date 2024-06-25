@@ -208,34 +208,30 @@ class Database {
   }
 
   async getAllAuctions() {
-    const query = `SELECT * FROM auctions`;
+    const query = 'SELECT * FROM auctions';
     const result = await this.client.query(query);
     return result.rows;
-}
+  }
 
-async insertAuction(data) {
+  async insertAuction(data) {
     const insertQuery = `
         INSERT INTO auctions 
-        (auction_id, proposal_id, departure_airport, arrival_airport, departure_time, 
-        airline, quantity, group_id, type) 
+        (auction_id, proposal_id, flight_id, quantity, group_id, type) 
         VALUES 
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ($1, $2, $3, $4, $5, $6)
     `;
     const values = [
-        data.auction_id,
-        data.proposal_id,
-        data.departure_airport,
-        data.arrival_airport,
-        data.departure_time,
-        data.airline,
-        data.quantity,
-        data.group_id,
-        data.type,
+      data.auction_id,
+      data.proposal_id,
+      data.flight_id,
+      data.quantity,
+      data.group_id,
+      data.type,
     ];
     await this.client.query(insertQuery, values);
-}
+  }
 
-async insertProposal(data) {
+  async insertProposal(data) {
     const insertQuery = `
         INSERT INTO proposals 
         (auction_id, proposal_id, departure_airport, arrival_airport, departure_time, 
@@ -244,20 +240,20 @@ async insertProposal(data) {
         ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     `;
     const values = [
-        data.auction_id,
-        data.proposal_id,
-        data.departure_airport,
-        data.arrival_airport,
-        data.departure_time,
-        data.airline,
-        data.quantity,
-        data.group_id,
-        data.type,
+      data.auction_id,
+      data.proposal_id,
+      data.departure_airport,
+      data.arrival_airport,
+      data.departure_time,
+      data.airline,
+      data.quantity,
+      data.group_id,
+      data.type,
     ];
     await this.client.query(insertQuery, values);
-}
+  }
 
-async insertResponse(data) {
+  async insertResponse(data) {
     const insertQuery = `
         INSERT INTO responses 
         (auction_id, proposal_id, departure_airport, arrival_airport, departure_time, 
@@ -266,19 +262,18 @@ async insertResponse(data) {
         ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     `;
     const values = [
-        data.auction_id,
-        data.proposal_id,
-        data.departure_airport,
-        data.arrival_airport,
-        data.departure_time,
-        data.airline,
-        data.quantity,
-        data.group_id,
-        data.type,
+      data.auction_id,
+      data.proposal_id,
+      data.departure_airport,
+      data.arrival_airport,
+      data.departure_time,
+      data.airline,
+      data.quantity,
+      data.group_id,
+      data.type,
     ];
     await this.client.query(insertQuery, values);
-}
-
+  }
 
   async close() {
     await this.client.end();

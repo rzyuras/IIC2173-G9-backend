@@ -53,10 +53,7 @@ CREATE TABLE IF NOT EXISTS recommendations (
 CREATE TABLE IF NOT EXISTS auctions (
     auction_id VARCHAR(255) PRIMARY KEY,
     proposal_id VARCHAR(255),
-    departure_airport VARCHAR(255),
-    arrival_airport VARCHAR(255),
-    departure_time TIMESTAMPTZ,
-    airline VARCHAR(255),
+    flight_id INT REFERENCES flights(id),
     quantity INT,
     group_id INT,
     type VARCHAR(255)

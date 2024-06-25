@@ -529,18 +529,6 @@ app.post('/flights/validation', async (req, res) => {
   }
 });
 
-app.get('/flights/:identifier', async (req, res) => {
-  try {
-    const flight = await db.getFlight(req.params.identifier);
-    res.json({ flight });
-  } catch (error) {
-    console.log('Error during get flight: ', error);
-    res
-      .status(500)
-      .json({ message: 'Error retrieving flight', error: error.message });
-  }
-});
-
 app.get('/flights/auctions', jwtCheck, checkAdmin, async (req, res) => {
   try {
     const auctions = await db.getAllAuctions();
@@ -550,28 +538,42 @@ app.get('/flights/auctions', jwtCheck, checkAdmin, async (req, res) => {
   }
 });
 
-
 app.post('/flights/auctions', jwtCheck, checkAdmin, async (req, res) => {
   try {
+    if (Number.isNaN(parseInt(req.body.flight_id, 10))) {
+      res.status(400).json({ message: 'Invalid flight_id' });
+    }
+
+    const flight = await db.getFlight(req.body.flight_id);
+
     const auction = {
       auction_id: uuidv4(),
-      proposal_id: "",
-      departure_airport: req.body.departure_airport,
-      arrival_airport: req.body.arrival_airport,
-      departure_time: moment.tz(req.body.departure_time, 'YYYY-MM-DD HH:mm', 'America/Santiago').utc().format(),
-      airline: req.body.airline,
+      proposal_id: '',
+      departure_airport: flight.departure_airport_id,
+      arrival_airport: flight.arrival_airport_id,
+      departure_time: moment.tz(flight.departure_airport_time, 'YYYY-MM-DD HH:mm', 'America/Santiago').utc().format(),
+      airline: flight.airline,
       quantity: req.body.quantity,
       group_id: req.body.group_id,
-      type: 'offer'
+      type: 'offer',
     };
-    await db.insertAuction(auction);
+
+    const auctionDb = {
+      auction_id: auction.auction_id,
+      proposal_id: auction.proposal_id,
+      flight_id: req.body.flight_id,
+      quantity: auction.quantity,
+      group_id: auction.group_id,
+      type: auction.type,
+    };
+
+    await db.insertAuction(auctionDb);
     client.publish('flights/auctions', JSON.stringify(auction));
     res.status(201).json({ message: 'Auction created successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error creating auction', error: error.message });
   }
 });
-
 
 app.post('/flights/auctions/proposal', jwtCheck, checkAdmin, async (req, res) => {
   try {
@@ -584,7 +586,7 @@ app.post('/flights/auctions/proposal', jwtCheck, checkAdmin, async (req, res) =>
       airline: req.body.airline,
       quantity: req.body.quantity,
       group_id: req.body.group_id,
-      type: 'proposal'
+      type: 'proposal',
     };
     await db.insertProposal(proposal);
     client.publish('flights/auctions', JSON.stringify(proposal));
@@ -593,7 +595,6 @@ app.post('/flights/auctions/proposal', jwtCheck, checkAdmin, async (req, res) =>
     res.status(500).json({ message: 'Error creating proposal', error: error.message });
   }
 });
-
 
 app.post('/flights/auctions/response', jwtCheck, checkAdmin, async (req, res) => {
   try {
@@ -606,7 +607,7 @@ app.post('/flights/auctions/response', jwtCheck, checkAdmin, async (req, res) =>
       airline: req.body.airline,
       quantity: req.body.quantity,
       group_id: req.body.group_id,
-      type: req.body.type 
+      type: req.body.type,
     };
     await db.insertResponse(response);
     client.publish('flights/auctions', JSON.stringify(response));
@@ -616,9 +617,19 @@ app.post('/flights/auctions/response', jwtCheck, checkAdmin, async (req, res) =>
   }
 });
 
+app.get('/flights/:identifier', async (req, res) => {
+  try {
+    const flight = await db.getFlight(req.params.identifier);
+    res.json({ flight });
+  } catch (error) {
+    console.log('Error during get flight: ', error);
+    res
+      .status(500)
+      .json({ message: 'Error retrieving flight', error: error.message });
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
-

@@ -34,13 +34,13 @@ sudo systemctl stop redis
 ## Docker Bash
 #### Encuentrar el ID del contenedor:
 ```bash
-docker ps:
+docker-compose ps:
 ```
 
 
 #### Accede al contenedor:
 ```bash
-docker exec -it <contenedor_id> bash
+docker exec -it <contenedor_name> bash
 ```
 
 #### Accede a la base de datos PostgreSQL:
