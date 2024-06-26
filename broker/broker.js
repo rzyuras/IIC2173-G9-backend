@@ -5,6 +5,9 @@ const getToken = require('./jwttoken');
 const urlFlights = 'http://app:3000/flights';
 const urlRequest = 'http://app:3000/flights/request/other';
 const urlValidation = 'http://app:3000/flights/validation';
+const urlAuction = 'http://app:3000/flights/auctions';
+const urlProposal = 'http://app:3000/flights/auctions/proposal';
+const urlResponse = 'http://app:3000/flights/auctions/response';
 
 class MQTTClient {
   constructor(broker, port, user, password) {
@@ -17,12 +20,12 @@ class MQTTClient {
         'flights/info',
         'flights/requests',
         'flights/validation',
+        'flights/auctions',
       ]);
     });
     this.client.on('message', (topic, message) => this.onMessage(topic, message));
   }
 
-  // eslint-disable-next-line class-methods-use-this
   async onMessage(topic, message) {
     if (topic === 'flights/info') {
       try {
@@ -46,16 +49,9 @@ class MQTTClient {
           airline_logo: flights[0].airline_logo,
         };
 
-        // Se hace el POST pero no se asigna a una variable ya que no se utiliza
         await axios.post(urlFlights, payload);
-
-        // Comentario o eliminación de la declaración console
       } catch (error) {
-        // Es aceptable dejar el console.error aquí para el registro de errores
-        // eslint-disable-next-line no-console
-        console.error(
-          `An error occurred while sending the flight message: ${error}`,
-        );
+        console.error(`An error occurred while sending the flight message: ${error}`);
       }
     } else if (topic === 'flights/requests') {
       try {
@@ -81,9 +77,7 @@ class MQTTClient {
           },
         });
       } catch (error) {
-        console.error(
-          `An error occurred while processing the other group request messages: ${error}`,
-        );
+        console.error(`An error occurred while processing the other group request messages: ${error}`);
       }
     } else if (topic === 'flights/validation') {
       try {
@@ -97,24 +91,71 @@ class MQTTClient {
 
         await axios.post(urlValidation, payload).catch((error) => {
           if (error.response) {
-            console.log(
-              'Detalles del error del servidor:',
-              error.response.data,
-            );
+            console.log('Detalles del error del servidor:', error.response.data);
             console.log('Código de estado:', error.response.status);
           } else if (error.request) {
-            console.log(
-              'La solicitud fue hecha pero no se recibió respuesta',
-              error.message,
-            );
+            console.log('La solicitud fue hecha pero no se recibió respuesta', error.message);
           } else {
             console.log('Error al hacer la solicitud:', error.message);
           }
         });
       } catch (error) {
-        console.error(
-          `An error occurred while processing the message: ${error}`,
-        );
+        console.error(`An error occurred while processing the validation message: ${error}`);
+      }
+    } else if (topic === 'flights/auctions') {
+      try {
+        const data = JSON.parse(message);
+        data.who = 'broker';
+        console.log('broker data', data);
+        const token = await getToken();
+        if (data.type === 'offer') {
+          await axios.post(urlAuction, data, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }).catch((error) => {
+            if (error.response) {
+              console.log('Detalles del error del servidor:', error.response.data);
+              console.log('Código de estado:', error.response.status);
+            } else if (error.request) {
+              console.log('La solicitud fue hecha pero no se recibió respuesta', error.message);
+            } else {
+              console.log('Error al hacer la solicitud:', error.message);
+            }
+          });
+        } else if (data.type === 'proposal') {
+          await axios.post(urlProposal, data, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }).catch((error) => {
+            if (error.response) {
+              console.log('Detalles del error del servidor:', error.response.data);
+              console.log('Código de estado:', error.response.status);
+            } else if (error.request) {
+              console.log('La solicitud fue hecha pero no se recibió respuesta', error.message);
+            } else {
+              console.log('Error al hacer la solicitud:', error.message);
+            }
+          });
+        } else if (data.type === 'acceptance' || data.type === 'rejection') {
+          await axios.post(urlResponse, data, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }).catch((error) => {
+            if (error.response) {
+              console.log('Detalles del error del servidor:', error.response.data);
+              console.log('Código de estado:', error.response.status);
+            } else if (error.request) {
+              console.log('La solicitud fue hecha pero no se recibió respuesta', error.message);
+            } else {
+              console.log('Error al hacer la solicitud:', error.message);
+            }
+          });
+        }
+      } catch (error) {
+        console.error(`An error occurred while processing the auction message: ${error.message}`);
       }
     }
   }
