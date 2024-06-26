@@ -685,11 +685,11 @@ app.post('/flights/auctions/response', jwtCheck, checkAdmin, async (req, res) =>
         res.status(404).json({ message: 'Flight not found' });
       }
 
-      if (req.body.group_id === '9') {
+      if (req.body.group_id === '9' && response.type === 'acceptance') {
         db.updateGroupTickets(response.quantity, response.flight_id);
       }
 
-      if (req.body.group_id !== '9') {
+      if (req.body.group_id !== '9' && response.type === 'acceptance') {
         db.updateGroupTickets(-1 * response.quantity, response.flight_id);
       }
     }
