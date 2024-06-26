@@ -539,57 +539,121 @@ app.get('/flights/auctions', jwtCheck, checkAdmin, async (req, res) => {
 });
 
 app.post('/flights/auctions', jwtCheck, checkAdmin, async (req, res) => {
+  console.log('flights/auctions', req.body);
   try {
-    if (Number.isNaN(parseInt(req.body.flight_id, 10))) {
-      res.status(400).json({ message: 'Invalid flight_id' });
+    let flight;
+
+    if (req.body.who === 'us') {
+      console.log('auctions us');
+      flight = await db.getFlight(req.body.flight_id);
+    }
+    if (req.body.who === 'broker') {
+      console.log('auctions them');
+      const departure = req.body.departure_airport;
+      const arrival = req.body.arrival_airport;
+      const departureTime = moment.tz(req.body.departure_time, 'YYYY-MM-DD HH:mm', 'America/Santiago').utc().format(); // Chile -> UTC
+      flight = await db.getFlightBydata(departure, arrival, departureTime);
     }
 
-    const flight = await db.getFlight(req.body.flight_id);
+    if (flight) {
+      const auction = {
+        auction_id: req.body.group_id === 9 ? uuidv4() : req.body.auction_id,
+        proposal_id: '',
+        departure_airport: flight.departure_airport_id,
+        arrival_airport: flight.arrival_airport_id,
+        departure_time: moment.tz(flight.departure_airport_time, 'America/Santiago').format('YYYY-MM-DD HH:mm'), // UTC -> Chile
+        airline: flight.airline,
+        quantity: req.body.quantity,
+        group_id: req.body.group_id,
+        type: 'offer',
+      };
 
-    const auction = {
-      auction_id: uuidv4(),
-      proposal_id: '',
-      departure_airport: flight.departure_airport_id,
-      arrival_airport: flight.arrival_airport_id,
-      departure_time: moment.tz(flight.departure_airport_time, 'YYYY-MM-DD HH:mm', 'America/Santiago').utc().format(),
-      airline: flight.airline,
-      quantity: req.body.quantity,
-      group_id: req.body.group_id,
-      type: 'offer',
-    };
+      const auctionDb = {
+        auction_id: auction.auction_id,
+        proposal_id: auction.proposal_id,
+        flight_id: flight.id,
+        quantity: auction.quantity,
+        group_id: auction.group_id,
+        type: auction.type,
+      };
+      await db.insertAuction(auctionDb);
+      if (req.body.group_id && req.body.group_id === '9') {
+        client.publish('flights/auctions', JSON.stringify(auction));
+      }
+      res.status(201).json({ message: 'Auction created successfully' });
 
-    const auctionDb = {
-      auction_id: auction.auction_id,
-      proposal_id: auction.proposal_id,
-      flight_id: req.body.flight_id,
-      quantity: auction.quantity,
-      group_id: auction.group_id,
-      type: auction.type,
-    };
-
-    await db.insertAuction(auctionDb);
-    client.publish('flights/auctions', JSON.stringify(auction));
-    res.status(201).json({ message: 'Auction created successfully' });
+      if (req.body.who === 'us') {
+        db.updateGroupTickets(auctionDb.quantity, auctionDb.flight_id);
+      }
+    }
+    res.status(404).json({ message: 'Flight not found' });
   } catch (error) {
     res.status(500).json({ message: 'Error creating auction', error: error.message });
   }
 });
 
+app.get('/flights/auctions/proposals', jwtCheck, checkAdmin, async (req, res) => {
+  try {
+    const proposals = await db.auctionStatus();
+    res.json({ proposals });
+  } catch (error) {
+    res.status(500).json({ message: 'Error retrieving proposals', error: error.message });
+  }
+});
+
 app.post('/flights/auctions/proposal', jwtCheck, checkAdmin, async (req, res) => {
   try {
-    const proposal = {
-      auction_id: req.body.auction_id,
-      proposal_id: uuidv4(),
-      departure_airport: req.body.departure_airport,
-      arrival_airport: req.body.arrival_airport,
-      departure_time: moment.tz(req.body.departure_time, 'YYYY-MM-DD HH:mm', 'America/Santiago').utc().format(),
-      airline: req.body.airline,
-      quantity: req.body.quantity,
-      group_id: req.body.group_id,
-      type: 'proposal',
-    };
-    await db.insertProposal(proposal);
-    client.publish('flights/auctions', JSON.stringify(proposal));
+    if (req.body.who === 'broker') {
+      const departure = req.body.departure_airport;
+      const arrival = req.body.arrival_airport;
+      const departureTime = moment.tz(req.body.departure_time, 'YYYY-MM-DD HH:mm', 'America/Santiago').utc().format(); // Chile -> UTC
+      const flight = await db.getFlightBydata(departure, arrival, departureTime);
+      if (flight) {
+        const proposal = {
+          auction_id: req.body.auction_id, // nuestro uuid de nuestra subasta
+          proposal_id: req.body.proposal_id, // inventada por ellos
+          flight_id: flight.id,
+          quantity: req.body.quantity,
+          group_id: req.body.group_id, // el group id de ellos
+          type: 'proposal',
+        };
+
+        const myOffer = await db.getAuctionByUuid(proposal.auction_id);
+        if (myOffer) {
+          await db.insertProposal(proposal);
+        }
+      }
+    }
+
+    if (req.body.who === 'us') {
+      const flight = await db.getFlight(req.body.flight_id);
+      if (flight) {
+        const proposal = {
+          auction_id: req.body.auction_id, // uuid de la oferta que estamos respondiendo
+          proposal_id: uuidv4(), // para identificarla
+          departure_airport: flight.departure_airport_id,
+          arrival_airport: flight.arrival_airport_id,
+          departure_time: moment.tz(flight.departure_airport_time, 'America/Santiago').format('YYYY-MM-DD HH:mm'), // UTC -> Chile
+          airline: flight.airline,
+          quantity: req.body.quantity,
+          group_id: 9,
+          type: 'proposal',
+        };
+        const proposalDb = {
+          auction_id: proposal.auction_id,
+          proposal_id: proposal.proposal_id,
+          flight_id: flight.id,
+          quantity: proposal.quantity,
+          group_id: proposal.group_id,
+          type: proposal.type,
+        };
+        console.log('haciendo proposal a otro grupo', proposalDb);
+        await db.insertProposal(proposalDb);
+        client.publish('flights/auctions', JSON.stringify(proposal));
+      } else {
+        res.status(404).json({ message: 'Flight not found' });
+      }
+    }
     res.status(201).json({ message: 'Proposal created successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error creating proposal', error: error.message });
@@ -598,20 +662,61 @@ app.post('/flights/auctions/proposal', jwtCheck, checkAdmin, async (req, res) =>
 
 app.post('/flights/auctions/response', jwtCheck, checkAdmin, async (req, res) => {
   try {
-    const response = {
-      auction_id: req.body.auction_id,
-      proposal_id: req.body.proposal_id,
-      departure_airport: req.body.departure_airport,
-      arrival_airport: req.body.arrival_airport,
-      departure_time: moment.tz(req.body.departure_time, 'YYYY-MM-DD HH:mm', 'America/Santiago').utc().format(),
-      airline: req.body.airline,
-      quantity: req.body.quantity,
-      group_id: req.body.group_id,
-      type: req.body.type,
-    };
-    await db.insertResponse(response);
-    client.publish('flights/auctions', JSON.stringify(response));
-    res.status(201).json({ message: 'Response sent successfully' });
+    let response;
+    if (req.body.who === 'broker') {
+      const departure = req.body.departure_airport;
+      const arrival = req.body.arrival_airport;
+      const departureTime = moment.tz(req.body.departure_time, 'YYYY-MM-DD HH:mm', 'America/Santiago').utc().format(); // Chile -> UTC
+      console.log(departure, arrival, departureTime);
+      const flight = await db.getFlightBydata(departure, arrival, departureTime);
+      console.log(flight);
+      if (flight) {
+        response = {
+          auction_id: req.body.auction_id,
+          proposal_id: req.body.proposal_id,
+          flight_id: flight.id,
+          quantity: req.body.quantity,
+          group_id: req.body.group_id,
+          type: req.body.type,
+        };
+        console.log('response recibido en broker');
+        await db.insertResponse(response);
+      } else {
+        res.status(404).json({ message: 'Flight not found' });
+      }
+
+      if (req.body.group_id === '9') {
+        db.updateGroupTickets(response.quantity, response.flight_id);
+      }
+
+      if (req.body.group_id !== '9') {
+        db.updateGroupTickets(-1 * response.quantity, response.flight_id);
+      }
+    }
+
+    if (req.body.who === 'us') {
+      const proposal = await db.getProposalByUuid(req.body.proposal_id);
+      const flight = await db.getFlight(proposal.flight_id);
+
+      if (proposal && flight) {
+        response = {
+          auction_id: proposal.auction_id,
+          proposal_id: proposal.proposal_id,
+          departure_airport: flight.departure_airport_id,
+          arrival_airport: flight.arrival_airport_id,
+          departure_time: moment.tz(flight.departure_airport_time, 'America/Santiago').format('YYYY-MM-DD HH:mm'), // UTX -> Chile
+          airline: flight.airline,
+          quantity: proposal.quantity,
+          group_id: proposal.group_id,
+          type: req.body.response,
+          extra: '9',
+        };
+
+        console.log('response recibido en us');
+        client.publish('flights/auctions', JSON.stringify(response));
+        res.status(201).json({ message: 'Response sent successfully' });
+      }
+    }
   } catch (error) {
     res.status(500).json({ message: 'Error sending response', error: error.message });
   }
@@ -627,6 +732,13 @@ app.get('/flights/:identifier', async (req, res) => {
       .status(500)
       .json({ message: 'Error retrieving flight', error: error.message });
   }
+});
+
+app.post('/broker', async (req, res) => {
+  const { message, route } = req.body;
+  console.log(message, route);
+  client.publish(route, JSON.stringify(message));
+  res.status(201).json({ message: 'Message sent successfully' });
 });
 
 const PORT = process.env.PORT || 3000;

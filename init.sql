@@ -61,12 +61,9 @@ CREATE TABLE IF NOT EXISTS auctions (
 
 -- proposals table
 CREATE TABLE IF NOT EXISTS proposals (
-    auction_id VARCHAR(255),
+    auction_id VARCHAR(255) REFERENCES auctions(auction_id),
     proposal_id VARCHAR(255) PRIMARY KEY,
-    departure_airport VARCHAR(255),
-    arrival_airport VARCHAR(255),
-    departure_time TIMESTAMPTZ,
-    airline VARCHAR(255),
+    flight_id INT REFERENCES flights(id),
     quantity INT,
     group_id INT,
     type VARCHAR(255)
@@ -76,10 +73,7 @@ CREATE TABLE IF NOT EXISTS proposals (
 CREATE TABLE IF NOT EXISTS responses (
     auction_id VARCHAR(255),
     proposal_id VARCHAR(255),
-    departure_airport VARCHAR(255),
-    arrival_airport VARCHAR(255),
-    departure_time TIMESTAMPTZ,
-    airline VARCHAR(255),
+    flight_id INT REFERENCES flights(id),
     quantity INT,
     group_id INT,
     type VARCHAR(255)

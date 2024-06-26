@@ -20,7 +20,7 @@ class MQTTClient {
         'flights/info',
         'flights/requests',
         'flights/validation',
-        'flights/auctions'
+        'flights/auctions',
       ]);
     });
     this.client.on('message', (topic, message) => this.onMessage(topic, message));
@@ -50,7 +50,6 @@ class MQTTClient {
         };
 
         await axios.post(urlFlights, payload);
-
       } catch (error) {
         console.error(`An error occurred while sending the flight message: ${error}`);
       }
@@ -106,28 +105,57 @@ class MQTTClient {
     } else if (topic === 'flights/auctions') {
       try {
         const data = JSON.parse(message);
+        data.who = 'broker';
+        console.log('broker data', data);
         const token = await getToken();
         if (data.type === 'offer') {
           await axios.post(urlAuction, data, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
+          }).catch((error) => {
+            if (error.response) {
+              console.log('Detalles del error del servidor:', error.response.data);
+              console.log('Código de estado:', error.response.status);
+            } else if (error.request) {
+              console.log('La solicitud fue hecha pero no se recibió respuesta', error.message);
+            } else {
+              console.log('Error al hacer la solicitud:', error.message);
+            }
           });
         } else if (data.type === 'proposal') {
           await axios.post(urlProposal, data, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
+          }).catch((error) => {
+            if (error.response) {
+              console.log('Detalles del error del servidor:', error.response.data);
+              console.log('Código de estado:', error.response.status);
+            } else if (error.request) {
+              console.log('La solicitud fue hecha pero no se recibió respuesta', error.message);
+            } else {
+              console.log('Error al hacer la solicitud:', error.message);
+            }
           });
         } else if (data.type === 'acceptance' || data.type === 'rejection') {
           await axios.post(urlResponse, data, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
+          }).catch((error) => {
+            if (error.response) {
+              console.log('Detalles del error del servidor:', error.response.data);
+              console.log('Código de estado:', error.response.status);
+            } else if (error.request) {
+              console.log('La solicitud fue hecha pero no se recibió respuesta', error.message);
+            } else {
+              console.log('Error al hacer la solicitud:', error.message);
+            }
           });
         }
       } catch (error) {
-        console.error(`An error occurred while processing the auction message: ${error}`);
+        console.error(`An error occurred while processing the auction message: ${error.message}`);
       }
     }
   }
