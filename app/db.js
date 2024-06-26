@@ -207,6 +207,110 @@ class Database {
     return result.rows[0];
   }
 
+  async getAllAuctions() {
+    const query = 'SELECT * FROM auctions';
+    const result = await this.client.query(query);
+    return result.rows;
+  }
+
+  async insertAuction(data) {
+    const insertQuery = `
+        INSERT INTO auctions 
+        (auction_id, proposal_id, flight_id, quantity, group_id, type) 
+        VALUES 
+        ($1, $2, $3, $4, $5, $6)
+    `;
+    const values = [
+      data.auction_id,
+      data.proposal_id,
+      data.flight_id,
+      data.quantity,
+      data.group_id,
+      data.type,
+    ];
+    await this.client.query(insertQuery, values);
+  }
+
+  async getAuctionByUuid(auctionId) {
+    const query = `
+        SELECT * FROM auctions WHERE auction_id = $1
+    `;
+    const result = await this.client.query(query, [auctionId]);
+    return result.rows[0];
+  }
+
+  async getAllProposals() {
+    const query = 'SELECT * FROM proposals';
+    const result = await this.client.query(query);
+    return result.rows;
+  }
+
+  async getProposalByUuid(proposalId) {
+    const query = `
+        SELECT * FROM proposals WHERE proposal_id = $1
+    `;
+    const result = await this.client.query(query, [proposalId]);
+    return result.rows[0];
+  }
+
+  async insertProposal(data) {
+    const insertQuery = `
+        INSERT INTO proposals 
+        (auction_id, proposal_id, flight_id, group_id, type, quantity) 
+        VALUES 
+        ($1, $2, $3, $4, $5, $6)
+    `;
+    const values = [
+      data.auction_id,
+      data.proposal_id,
+      data.flight_id,
+      data.group_id,
+      data.type,
+      data.quantity,
+    ];
+    await this.client.query(insertQuery, values);
+  }
+
+  async insertResponse(data) {
+    const insertQuery = `
+        INSERT INTO responses 
+        (auction_id, proposal_id, flight_id, quantity, group_id, type) 
+        VALUES 
+        ($1, $2, $3, $4, $5, $6)
+    `;
+    const values = [
+      data.auction_id,
+      data.proposal_id,
+      data.flight_id,
+      data.quantity,
+      data.group_id,
+      data.type,
+    ];
+    await this.client.query(insertQuery, values);
+  }
+
+  async auctionStatus() {
+    const query = `
+        SELECT
+            p.auction_id,
+            p.proposal_id,
+            p.flight_id,
+            p.quantity,
+            p.group_id,
+            p.type,
+            COALESCE(r.type, 'pending') AS response
+        FROM
+            proposals p
+        LEFT JOIN
+            responses r
+        ON
+            p.auction_id = r.auction_id
+            AND p.proposal_id = r.proposal_id;
+    `;
+    const response = await this.client.query(query);
+    return response.rows;
+  }
+
   async close() {
     await this.client.end();
   }
